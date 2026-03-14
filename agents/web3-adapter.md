@@ -262,6 +262,17 @@ created: [date]
 
 # [Platform] Adaptation
 
+
+<!-- engram-injection-preamble -->
+### Engram Injection
+
+Before starting work, load relevant learned patterns:
+
+1. **Preferred**: Call `datacore.inject` MCP tool with `prompt` = your task description and `scope` = `agent:web3-adapter`
+2. **Fallback**: If MCP is unavailable, read `.datacore/state/agent-engrams/web3-adapter.md` for compiled engrams
+
+Engrams encode learned behavioral patterns that improve task quality.
+
 ## Adapted Content
 
 [Content formatted for target platform]
