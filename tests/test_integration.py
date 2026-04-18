@@ -56,7 +56,7 @@ class TestEndToEndAutonomous:
             assert result['action'] == 'escalated'
 
             # Verify state has 1 posted, 0 escalated (escalated doesn't write state)
-            st = state_mod.load(state_file)
+            st, _ = state_mod.load(state_file)
             assert len(st.get('posted', [])) == 1
 
     def test_rate_limit_blocks_excess_posts(self, tmp_path):

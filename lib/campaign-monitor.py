@@ -20,9 +20,11 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
+from env_utils import parse_env_file, load_env_files
+
 # Config
 DATA_DIR = Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data")))
-ENV_FILE = DATA_DIR / ".datacore/env/.env"
 STATE_FILE = DATA_DIR / ".datacore/state/campaign-state.json"
 LATE_BASE = "https://getlate.dev/api/v1"
 ORG_ACCOUNT_ID = "YOUR_ACCOUNT_ID"  # Replace with your Late.dev account ID
@@ -31,15 +33,7 @@ ORG_PROFILE_ID = "YOUR_PROFILE_ID"  # Replace with your Late.dev profile ID
 
 def load_env():
     """Load LATE_API_KEY from .env file."""
-    if not ENV_FILE.exists():
-        return {}
-    env = {}
-    for line in ENV_FILE.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, val = line.split("=", 1)
-            env[key.strip()] = val.strip()
-    return env
+    return parse_env_file(DATA_DIR / ".datacore" / "env" / ".env")
 
 
 def late_get(endpoint, api_key, params=None):

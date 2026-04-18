@@ -1,3 +1,10 @@
+# Layered context (DIP-0002)
+CLAUDE.md
+*.space.md
+*.org.md
+*.local.md
+*.local.yaml
+
 __pycache__/
 *.pyc
 *.pyo

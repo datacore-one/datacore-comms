@@ -70,6 +70,11 @@ provides:
     # Engagement
     - name: engagement
       description: Run X engagement pipeline — discover, draft, notify via Telegram
+    - name: engage
+      description: Launch Chrome-based X feed engagement agent — likes, follows, reply drafts
+    # Video
+    - name: demo-video
+      description: Demo video pipeline — screen recording to styled captions to X post via ffmpeg + Late.dev
     # Landing
     - name: landing
       description: Create or update landing pages for campaigns

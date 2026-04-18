@@ -39,6 +39,7 @@ ACCOUNT_PREFIXES = {
     'jssr': 'JSSR_X_',
     'datacore': 'DATACORE_X_',
     'mr_data_dc': 'MRDATA_X_',
+    'plur': 'PLUR_X_',
 }
 
 # Kill switch — if this file exists, all posting is halted
@@ -54,7 +55,8 @@ class KillSwitchActive(RuntimeError):
 
 class XPoster:
     def __init__(self, account: str, daily_limit: int = 50,
-                 user_id: str = None, state_dir: str = None):
+                 user_id: str = None, state_dir: str = None,
+                 verify_links: bool = True):
         prefix = ACCOUNT_PREFIXES.get(account)
         if not prefix:
             raise ValueError(
@@ -86,27 +88,50 @@ class XPoster:
         """)
         self._rate_db.commit()
 
+        # Link verification gate
+        self.verify_links = verify_links
+        self._verifier = None
+        if verify_links:
+            try:
+                import sys
+                sys.path.insert(0, str(Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data"))) / ".datacore" / "lib"))
+                from link_verifier import LinkVerifier
+                self._verifier = LinkVerifier()
+            except ImportError:
+                import sys
+                print("Warning: link_verifier not found, link verification disabled", file=sys.stderr)
+                self.verify_links = False
+
     # --- Public API ---
 
-    def post(self, text: str) -> dict:
+    def _verify_text_links(self, text: str, skip_verification: bool = False):
+        """Verify all links in text before posting. Raises LinkVerificationError on failure."""
+        if skip_verification or not self.verify_links or not self._verifier:
+            return
+        self._verifier.verify_or_raise(text)
+
+    def post(self, text: str, skip_verification: bool = False) -> dict:
         """Post a standalone tweet."""
+        self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
         result = self._oauth_post(TWEET_URL, {'text': text})
         self._increment_rate_count()
         return result
 
-    def reply(self, text: str, reply_to_id: str) -> dict:
+    def reply(self, text: str, reply_to_id: str, skip_verification: bool = False) -> dict:
         """Reply to a tweet."""
+        self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
         result = self._oauth_post(TWEET_URL, {
             'text': text,
-            'reply': {'in_reply_to_tweet_id': reply_to_id},
+            'reply': {'in_reply_to_tweet_id': str(reply_to_id)},
         })
         self._increment_rate_count()
         return result
 
-    def quote_rt(self, text: str, tweet_id: str) -> dict:
+    def quote_rt(self, text: str, tweet_id: str, skip_verification: bool = False) -> dict:
         """Quote retweet."""
+        self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
         result = self._oauth_post(TWEET_URL, {
             'text': text,
@@ -132,6 +157,82 @@ class XPoster:
         self._check_kill_switch()
         url = f"https://api.x.com/2/users/{self.user_id}/following/{target_user_id}"
         return self._oauth_delete(url)
+
+    def can_reply(self, tweet_id: str) -> bool:
+        """Check if we can reply to a tweet (reply_settings allows it).
+
+        Returns True if replies are open to everyone, False if restricted.
+        Returns True on API errors (fail open — let the reply attempt reveal 403).
+        """
+        try:
+            url = f"https://api.x.com/2/tweets/{tweet_id}?tweet.fields=reply_settings"
+            result = self._oauth_get(url)
+            settings = result.get("data", {}).get("reply_settings", "everyone")
+            return settings == "everyone"
+        except Exception:
+            return True  # Fail open — 403 will be caught at reply time
+
+    def upload_media(self, image_path: str) -> str:
+        """Upload an image and return media_id_string. Uses v1.1 media/upload."""
+        upload_url = "https://upload.twitter.com/1.1/media/upload.json"
+        image_data = Path(image_path).read_bytes()
+        boundary = secrets.token_hex(16)
+        filename = Path(image_path).name
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="media_data"\r\n\r\n'
+            f"{base64.b64encode(image_data).decode()}\r\n"
+            f"--{boundary}--\r\n"
+        ).encode()
+        oauth_params = {
+            "oauth_consumer_key": self.api_key,
+            "oauth_nonce": secrets.token_hex(16),
+            "oauth_signature_method": "HMAC-SHA1",
+            "oauth_timestamp": str(int(time.time())),
+            "oauth_token": self.access_token,
+            "oauth_version": "1.0",
+        }
+        sig = self._oauth_signature("POST", upload_url, oauth_params)
+        oauth_params["oauth_signature"] = sig
+        header = "OAuth " + ", ".join(
+            f'{self._percent_encode(k)}="{self._percent_encode(v)}"'
+            for k, v in sorted(oauth_params.items())
+        )
+        req = Request(upload_url, data=body, method="POST")
+        req.add_header("Authorization", header)
+        req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+        try:
+            with urlopen(req, timeout=60) as resp:
+                result = json.loads(resp.read())
+                return result["media_id_string"]
+        except HTTPError as e:
+            error_body = e.read().decode()
+            raise Exception(f"Media upload error {e.code}: {error_body}")
+
+    def post_with_media(self, text: str, media_ids: list) -> dict:
+        """Post a tweet with media attachments."""
+        self._check_rate_limit()
+        payload = {'text': text, 'media': {'media_ids': media_ids}}
+        result = self._oauth_post(TWEET_URL, payload)
+        self._increment_rate_count()
+        return result
+
+    def reply_with_media(self, text: str, reply_to_id: str, media_ids: list) -> dict:
+        """Reply to a tweet with media attachments."""
+        self._check_rate_limit()
+        payload = {
+            'text': text,
+            'reply': {'in_reply_to_tweet_id': str(reply_to_id)},
+            'media': {'media_ids': media_ids},
+        }
+        result = self._oauth_post(TWEET_URL, payload)
+        self._increment_rate_count()
+        return result
+
+    def get_tweet(self, tweet_id: str, fields: str = "reply_settings,author_id,public_metrics") -> dict:
+        """Fetch tweet details via X API v2."""
+        url = f"https://api.x.com/2/tweets/{tweet_id}?tweet.fields={fields}"
+        return self._oauth_get(url)
 
     # --- Kill switch ---
 
@@ -224,6 +325,48 @@ class XPoster:
                 time.sleep(min(retry_after + 5, 900))  # Cap at 15 min
                 return self._oauth_post(url, payload, _retries=_retries + 1)
             raise Exception(f"X API error {e.code}: {error_body}")
+
+    def _oauth_get(self, url: str, _retries: int = 0) -> dict:
+        """GET request with OAuth 1.0a signing.
+
+        Query params are included in the signature base string per OAuth spec.
+        """
+        # Parse URL and query params
+        if '?' in url:
+            base_url, qs = url.split('?', 1)
+            query_params = dict(urllib.parse.parse_qsl(qs))
+        else:
+            base_url = url
+            query_params = {}
+
+        # Build OAuth params + query params for signature
+        oauth_params = {
+            "oauth_consumer_key": self.api_key,
+            "oauth_nonce": secrets.token_hex(16),
+            "oauth_signature_method": "HMAC-SHA1",
+            "oauth_timestamp": str(int(time.time())),
+            "oauth_token": self.access_token,
+            "oauth_version": "1.0",
+        }
+        all_params = {**oauth_params, **query_params}
+        sig = self._oauth_signature("GET", base_url, all_params)
+        oauth_params["oauth_signature"] = sig
+        header = "OAuth " + ", ".join(
+            f'{self._percent_encode(k)}="{self._percent_encode(v)}"'
+            for k, v in sorted(oauth_params.items())
+        )
+
+        req = Request(url, method="GET")
+        req.add_header("Authorization", header)
+        try:
+            with urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read())
+        except HTTPError as e:
+            error_body = e.read().decode()
+            if e.code == 429 and _retries < 2:
+                time.sleep(5)
+                return self._oauth_get(url, _retries=_retries + 1)
+            raise Exception(f"X API GET error {e.code}: {error_body}")
 
     def _oauth_delete(self, url: str, _retries: int = 0) -> dict:
         auth = self._oauth_header("DELETE", url)

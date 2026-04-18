@@ -108,7 +108,7 @@ class AutonomousPoster:
 
         # Record in engagement state for tracking alongside manual approvals
         if self.state_mod and self.state_file:
-            st = self.state_mod.load(self.state_file)
+            st, baseline = self.state_mod.load(self.state_file)
             self.state_mod.mark_seen(st, target_tweet_id)
             self.state_mod._bump_stat(st, "posted")
             self.state_mod._bump_stat(st, "auto_posted")
@@ -120,7 +120,7 @@ class AutonomousPoster:
                 "posted_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                 "mode": "autonomous",
             })
-            self.state_mod.save(st, self.state_file)
+            self.state_mod.save(st, self.state_file, baseline=baseline)
 
         self.notifier.notify_posted(
             draft_text=draft_text,

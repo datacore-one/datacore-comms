@@ -268,7 +268,7 @@ VIRAL_PLAYBOOK.md                     # Weekly schedule, patterns
 
 Before starting work, load relevant learned patterns:
 
-1. **Preferred**: Call `datacore.inject` MCP tool with `prompt` = your task description and `scope` = `agent:campaign-planner`
+1. **Preferred**: Call `plur_inject_hybrid` MCP tool with `prompt` = your task description and `scope` = `agent:campaign-planner`
 2. **Fallback**: If MCP is unavailable, read `.datacore/state/agent-engrams/campaign-planner.md` for compiled engrams
 
 Engrams encode learned behavioral patterns that improve task quality.

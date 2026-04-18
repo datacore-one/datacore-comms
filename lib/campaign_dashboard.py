@@ -19,7 +19,7 @@ class CampaignDashboard:
         lines = ["## Campaign Dashboard\n"]
 
         # Engagement metrics
-        st = state_mod.load(self.state_file)
+        st, _ = state_mod.load(self.state_file)
         posted = st.get('posted', [])
         pending = st.get('pending', [])
 

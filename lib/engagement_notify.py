@@ -7,6 +7,7 @@ Sends inline keyboard with Approve/Reject buttons.
 
 import json
 import os
+from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
@@ -19,11 +20,20 @@ def send_draft_for_approval(
     draft_reply: str,
     bot_token: str = None,
     chat_id: str = None,
+    auto_register: bool = True,
 ) -> int:
     """Send a draft reply to Telegram with inline approval buttons.
 
+    If auto_register=True (default), ensures the draft is registered in
+    engagement state before sending. This prevents "not found" errors when
+    callers bypass the draft pipeline.
+
     Returns: Telegram message_id (for later editing on approve/reject)
     """
+    if auto_register:
+        _ensure_registered(draft_id, target_author, target_content,
+                           target_url, draft_reply)
+
     token = bot_token or os.environ.get("TELEGRAM_BOT_TOKEN")
     cid = chat_id or os.environ.get("ENGAGEMENT_CHAT_ID")
     if not token or not cid:
@@ -108,3 +118,35 @@ def edit_message(message_id: int, new_text: str, bot_token: str = None, chat_id:
 
 def _escape_html(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _ensure_registered(draft_id, target_author, target_content,
+                       target_url, draft_reply):
+    """Register draft in engagement state if not already pending."""
+    import sys
+    lib_dir = str(Path(__file__).parent)
+    if lib_dir not in sys.path:
+        sys.path.insert(0, lib_dir)
+    import engagement_state as state_mod
+
+    data_dir = Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data")))
+    state_file = data_dir / ".datacore" / "state" / "engagement-state.json"
+
+    st, baseline = state_mod.load(state_file)
+    if not state_mod.get_pending(st, draft_id):
+        # Extract tweet_id from URL if possible (x.com/.../status/NNNNN)
+        tweet_id = "unknown"
+        if "/status/" in target_url:
+            parts = target_url.rstrip("/").split("/status/")
+            if len(parts) == 2:
+                tweet_id = parts[1].split("?")[0]
+
+        state_mod.add_pending_with_id(
+            st, draft_id,
+            target_tweet_id=tweet_id,
+            target_author=target_author,
+            target_content=target_content,
+            target_url=target_url,
+            draft_reply=draft_reply,
+        )
+        state_mod.save(st, state_file, baseline=baseline)

@@ -98,4 +98,4 @@ Optional env vars in `.datacore/env/.env`: `X_CONSUMER_KEY`, `X_CONSUMER_SECRET`
 
 ---
 
-*This file covers structure, capability, and stable configuration. Learned behavior, user corrections, and operational preferences live as engrams — call `datacore.recall` for those.*
+*This file covers structure, capability, and stable configuration. Learned behavior, user corrections, and operational preferences live as engrams — call `plur_recall_hybrid` for those.*
