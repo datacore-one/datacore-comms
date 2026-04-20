@@ -97,16 +97,26 @@ PRIORITY_TARGETS = {
     "@accessnow", "@epicprivacy", "@web3aboratory", "@logos_network",
 }
 
+# Per-account configuration: env var prefix, X handle, user ID env var
+ACCOUNT_CONFIG = {
+    "fds": {"prefix": "FDS", "handle": "@FairDataSociety", "user_id_env": "FDS_X_USER_ID"},
+    "plur": {"prefix": "PLUR", "handle": "@plur_ai", "user_id_env": "PLUR_X_USER_ID"},
+}
+
 # Discovery sources in priority order. Each entry: (name, function_name, required_env_var_or_None)
 # Feed-first model: home timeline is primary, mentions search for responsiveness.
 # x_api search and x.ai disabled by default (expensive, low marginal value over feed).
 # Re-enable via config: remove from "disabled_sources" in engagement-state.json.
+# Note: {PREFIX}_X_API_KEY is resolved at runtime based on active account.
 DISCOVERY_SOURCES = [
-    ("x_home", "_discover_via_x_home", "FDS_X_API_KEY"),
-    ("x_api",  "_discover_via_x_api",  "FDS_X_API_KEY"),
+    ("x_home", "_discover_via_x_home", "{PREFIX}_X_API_KEY"),
+    ("x_api",  "_discover_via_x_api",  "{PREFIX}_X_API_KEY"),
     ("x.ai",   "_discover_via_xai",    "XAI_API_KEY"),
     ("exa",    "_discover_via_exa",    "EXA_API_KEY"),
 ]
+
+# Active account — set by discover() based on state, used by helper functions
+_active_account = "fds"
 
 
 # ── Account Type Filtering ──────────────────────────────────────────────────
@@ -145,10 +155,18 @@ def discover(state: dict, xai_api_key: str = None) -> List[dict]:
         List of conversation dicts: [{tweet_id, author, content, url, views,
         followers, relevance, topic_group, source}]
     """
+    global _active_account
     config = state.get("config", {})
     seen = state.get("seen", {})
     blacklist = set(config.get("blacklist_authors", []))
-    blacklist.add("@FairDataSociety")
+
+    # Account-aware: blacklist own handle, resolve env var prefix
+    account = state.get("account", "fds")
+    _active_account = account
+    acct_cfg = ACCOUNT_CONFIG.get(account, ACCOUNT_CONFIG["fds"])
+    prefix = acct_cfg["prefix"]
+    blacklist.add(acct_cfg["handle"])
+
     now = datetime.now(timezone.utc)
 
     # Override env if explicit key passed
@@ -167,7 +185,9 @@ def discover(state: dict, xai_api_key: str = None) -> List[dict]:
         "_discover_via_exa": _discover_via_exa,
     }
 
-    for source_name, func_name, required_env in DISCOVERY_SOURCES:
+    for source_name, func_name, required_env_template in DISCOVERY_SOURCES:
+        # Resolve {PREFIX} placeholder
+        required_env = required_env_template.replace("{PREFIX}", prefix) if required_env_template else None
         # Check if source is available
         if required_env and not os.environ.get(required_env):
             print(f"  [{source_name}] skipped — {required_env} not set")
@@ -303,6 +323,37 @@ XAI_QUERY_POOL = [
     ("infrastructure", "Find recent tweets (last 24h) about self-hosted alternatives to cloud services — Nextcloud, Matrix, IPFS, Ethereum storage, or other decentralized infrastructure. Look for people actively building or advocating, not just discussing theory. Exclude @FairDataSociety."),
 ]
 
+XAI_QUERY_POOL_PLUR = [
+    ("ai_memory", "Find recent tweets (last 24h) from developers frustrated that AI assistants forget everything between sessions, lose context, or can't remember corrections. Look for genuine pain, not product promos. Exclude @plur_ai."),
+    ("ai_memory", "Find recent tweets (last 24h) about AI memory, persistent context, long-term AI learning, or making AI assistants remember preferences and past work. Focus on builders and power users. Exclude @plur_ai."),
+    ("mcp_servers", "Find recent tweets (last 24h) about MCP servers, Model Context Protocol, Claude plugins, or extending AI coding assistants with custom tools. Technical discussions from developers. Exclude @plur_ai."),
+    ("mcp_servers", "Find recent tweets (last 24h) from developers building or using MCP servers, sharing MCP tools, or discussing the MCP ecosystem. Prefer tweets showing real projects. Exclude @plur_ai."),
+    ("agent_learning", "Find recent tweets (last 24h) about AI agents that learn from corrections, personalized AI, or the gap between AI capability and AI memory. Thoughtful takes from builders. Exclude @plur_ai."),
+    ("agent_learning", "Find recent tweets (last 24h) about Claude Code, Cursor, Copilot, or other AI coding tools — specifically about context limitations, losing work context, or wishing the AI remembered more. Exclude @plur_ai."),
+    ("local_first", "Find recent tweets (last 24h) about local-first AI, privacy-preserving AI tools, running AI without cloud, or keeping AI data on-device. Technical or philosophical arguments. Exclude @plur_ai."),
+    ("ai_dev_pain", "Find recent tweets (last 24h) from developers saying 'I had to explain X to my AI again', 're-prompting', 'context window too small', or similar frustrations with AI memory limits. Real pain, not memes. Exclude @plur_ai."),
+    ("plur_mentions", "Find recent tweets (last 24h) mentioning @plur_ai, plur.ai, PLUR memory, or engrams in the AI context. These are warm targets. Return all results. Exclude @plur_ai's own tweets."),
+]
+
+XAI_QUERY_POOL_BY_ACCOUNT = {
+    "fds": XAI_QUERY_POOL,
+    "plur": XAI_QUERY_POOL_PLUR,
+}
+
+XAI_SYSTEM_PROMPT_PLUR = """You are a research assistant finding conversations worth engaging with for @plur_ai — an open-source persistent memory engine for AI agents. PLUR gives AI assistants long-term memory that survives across sessions: corrections, preferences, and learned patterns stored as "engrams".
+
+IMPORTANT FILTERING RULES:
+- EXCLUDE tweets that are just promoting a crypto token or DeFi project
+- EXCLUDE "Good morning/night" style engagement farming tweets
+- EXCLUDE tweets from bot-like accounts or low-quality engagement farmers
+- EXCLUDE tweets with restricted replies
+- ONLY include tweets where reply_settings is "everyone"
+- PREFER developers, AI builders, power users of Claude/GPT/Cursor/Copilot
+- PREFER tweets expressing genuine frustration with AI memory limits
+- PREFER tweets discussing MCP servers, AI tools, agent architectures
+
+Return each conversation as JSON with: tweet_id, author_handle, author_name, content, url, views, followers, relevance (1-10), topic_group."""
+
 XAI_SYSTEM_PROMPT = """You are a research assistant finding conversations worth engaging with for @FairDataSociety — a project building privacy-first file sharing (Fairdrop) and data sovereignty infrastructure.
 
 IMPORTANT FILTERING RULES:
@@ -343,15 +394,17 @@ def _discover_via_xai(state: dict) -> List[dict]:
         return []
 
     config = state.get("config", {})
+    account = state.get("account", "fds")
     now = datetime.now(timezone.utc)
     from_date = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    query_pool = XAI_QUERY_POOL_BY_ACCOUNT.get(account, XAI_QUERY_POOL)
     conversations = []
-    rotation_start = config.get("query_rotation_index", 0) % len(XAI_QUERY_POOL)
+    rotation_start = config.get("query_rotation_index", 0) % len(query_pool)
 
     for i in range(XAI_QUERIES_PER_CYCLE):
-        idx = (rotation_start + i) % len(XAI_QUERY_POOL)
-        topic_group, query = XAI_QUERY_POOL[idx]
+        idx = (rotation_start + i) % len(query_pool)
+        topic_group, query = query_pool[idx]
 
         try:
             convs = _xai_run_query(api_key, query, from_date)
@@ -373,21 +426,24 @@ def _discover_via_xai(state: dict) -> List[dict]:
             conversations.append(conv)
 
     # Advance rotation index
-    config["query_rotation_index"] = (rotation_start + XAI_QUERIES_PER_CYCLE) % len(XAI_QUERY_POOL)
+    config["query_rotation_index"] = (rotation_start + XAI_QUERIES_PER_CYCLE) % len(query_pool)
     return conversations
 
 
 def _xai_run_query(api_key: str, query: str, from_date: str) -> List[dict]:
     """Execute a single x.ai discovery query."""
+    acct_cfg = ACCOUNT_CONFIG.get(_active_account, ACCOUNT_CONFIG["fds"])
+    system_prompt = XAI_SYSTEM_PROMPT_PLUR if _active_account == "plur" else XAI_SYSTEM_PROMPT
+    own_handle = acct_cfg["handle"].lstrip("@")
     payload = {
         "model": "grok-4-1-fast-non-reasoning",
         "input": [
-            {"role": "system", "content": XAI_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": query},
         ],
         "tools": [{"type": "x_search", "x_search": {
             "from_date": from_date,
-            "excluded_x_handles": ["FairDataSociety"],
+            "excluded_x_handles": [own_handle],
         }}],
     }
     body = json.dumps(payload).encode()
@@ -417,7 +473,7 @@ def _xai_run_query(api_key: str, query: str, from_date: str) -> List[dict]:
 X_API_SEARCH_URL = "https://api.x.com/2/tweets/search/recent"
 X_API_MAX_QUERIES = 10
 
-X_API_SEARCH_QUERIES = [
+X_API_SEARCH_QUERIES_FDS = [
     ("privacy_arch", '("zero-knowledge" OR "self-sovereign" OR "end-to-end encryption" OR "decentralized storage") -is:retweet lang:en -"airdrop" -"giveaway" -from:FairDataSociety'),
     ("surveillance", '("surveillance" OR "data breach" OR "privacy violation" OR "mass tracking") -is:retweet lang:en -"airdrop" -"giveaway" -from:FairDataSociety'),
     ("ai_agents", '("AI agent" OR "agentic" OR "MCP server" OR "MCP tool") ("data" OR "file" OR "storage" OR "privacy") -is:retweet lang:en -"airdrop" -from:FairDataSociety'),
@@ -427,6 +483,23 @@ X_API_SEARCH_QUERIES = [
     ("fair_data", '("data sovereignty" OR "data commons" OR "data rights" OR "who owns the data" OR "fair data") -is:retweet lang:en -"airdrop" -from:FairDataSociety'),
 ]
 
+X_API_SEARCH_QUERIES_PLUR = [
+    ("ai_memory", '("AI memory" OR "persistent memory" OR "AI forgets" OR "context window" OR "long-term memory") ("agent" OR "LLM" OR "AI") -is:retweet lang:en -"airdrop" -from:plur_ai'),
+    ("mcp_servers", '("MCP server" OR "MCP tool" OR "model context protocol" OR "Claude plugin") -is:retweet lang:en -from:plur_ai'),
+    ("agent_learning", '("agent learning" OR "AI personalization" OR "AI remembers" OR "AI corrections" OR "AI preferences") -is:retweet lang:en -from:plur_ai'),
+    ("plur_mentions", '(@plur_ai OR "plur.ai" OR "plur memory" OR "plur engram") -is:retweet'),
+    ("llm_tools", '("LLM tool" OR "AI coding assistant" OR "Claude Code" OR "Cursor" OR "Windsurf" OR "Copilot") ("memory" OR "context" OR "forget" OR "remember") -is:retweet lang:en -from:plur_ai'),
+    ("ai_dev_pain", '("AI forgets" OR "lost context" OR "start over" OR "re-explain" OR "every session") ("Claude" OR "GPT" OR "AI" OR "LLM") -is:retweet lang:en -from:plur_ai'),
+    ("local_first", '("local-first" OR "privacy-first" OR "on-device AI" OR "no cloud") ("AI" OR "agent" OR "LLM") -is:retweet lang:en -from:plur_ai'),
+]
+
+# Account-to-queries mapping
+X_API_SEARCH_QUERIES_BY_ACCOUNT = {
+    "fds": X_API_SEARCH_QUERIES_FDS,
+    "plur": X_API_SEARCH_QUERIES_PLUR,
+}
+X_API_SEARCH_QUERIES = X_API_SEARCH_QUERIES_FDS  # default fallback
+
 
 def _discover_via_x_api(state: dict) -> List[dict]:
     """Discovery via X API v2 recent search."""
@@ -434,10 +507,11 @@ def _discover_via_x_api(state: dict) -> List[dict]:
     if not poster:
         return []
 
-    # Support query override from config (feed-first: only run fds_mentions)
+    # Per-account query pool
     config = state.get("config", {})
+    account = state.get("account", "fds")
+    queries = X_API_SEARCH_QUERIES_BY_ACCOUNT.get(account, X_API_SEARCH_QUERIES)
     query_filter = config.get("x_api_queries_override")
-    queries = X_API_SEARCH_QUERIES
     if query_filter:
         queries = [(tg, q) for tg, q in queries if tg in query_filter]
 
@@ -511,9 +585,10 @@ def _discover_via_x_home(state: dict) -> List[dict]:
     if not poster:
         return []
 
-    user_id = os.environ.get("FDS_X_USER_ID")
+    acct_cfg = ACCOUNT_CONFIG.get(_active_account, ACCOUNT_CONFIG["fds"])
+    user_id = os.environ.get(acct_cfg["user_id_env"])
     if not user_id:
-        print("    FDS_X_USER_ID not set, can't read home timeline")
+        print(f"    {acct_cfg['user_id_env']} not set, can't read home timeline")
         return []
 
     import urllib.parse as _urlparse
@@ -696,7 +771,9 @@ def _get_x_poster():
     """Get an XPoster instance for X API calls. Returns None on failure."""
     try:
         from x_poster import XPoster
-        return XPoster(account='fds', user_id=os.environ.get('FDS_X_USER_ID'))
+        acct_cfg = ACCOUNT_CONFIG.get(_active_account, ACCOUNT_CONFIG["fds"])
+        user_id = os.environ.get(acct_cfg["user_id_env"])
+        return XPoster(account=_active_account, user_id=user_id)
     except Exception as e:
         print(f"    Can't init XPoster: {e}")
         return None

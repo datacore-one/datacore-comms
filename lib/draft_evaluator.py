@@ -260,8 +260,9 @@ def _run_evaluator(evaluator: str, prompt: str, model: str) -> EvalResult:
     if api_key:
         return _run_evaluator_openrouter(evaluator, prompt, api_key)
 
-    # Fallback to Claude CLI
-    env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE")}
+    # Fallback to Claude CLI — strip ANTHROPIC_API_KEY to use Max subscription OAuth
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith("CLAUDE") and k != "ANTHROPIC_API_KEY"}
     env["PATH"] = os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")
     env["HOME"] = os.environ.get("HOME", str(Path.home()))
 

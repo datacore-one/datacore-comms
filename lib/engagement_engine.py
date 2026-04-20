@@ -48,7 +48,14 @@ from env_utils import load_env_files
 
 # Paths
 DATA_DIR = Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data")))
-STATE_FILE = DATA_DIR / ".datacore" / "state" / "engagement-state.json"
+STATE_FILE = DATA_DIR / ".datacore" / "state" / "engagement-state.json"  # default, overridden per-account in run()
+
+
+def _state_file_for(account: str) -> Path:
+    """Per-account state file so quotas/seen/pending are independent."""
+    if account == "fds":
+        return STATE_FILE  # backwards compat
+    return DATA_DIR / ".datacore" / "state" / f"engagement-state-{account}.json"
 
 # Default limits — feed-first model (3 cycles/day, ~$4/day target)
 DEFAULT_DAILY_REPLY_LIMIT = 15
@@ -248,8 +255,10 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
         print(f"  Remove {kill_switch} to resume.")
         return
 
-    # Load state
-    st, baseline = state_mod.load(STATE_FILE)
+    # Load per-account state (quotas, seen, pending are independent per venture)
+    acct_state_file = _state_file_for(account)
+    st, baseline = state_mod.load(acct_state_file)
+    st["account"] = account  # Pass account to discover module
 
     # Initialize daily quotas (reset if new day)
     quotas = _get_daily_quotas(st)
@@ -262,7 +271,7 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
 
     if posted_today >= daily_reply_limit:
         print(f"  Daily limit reached ({posted_today}/{daily_reply_limit}). Skipping.")
-        state_mod.save(st, STATE_FILE, baseline=baseline)
+        state_mod.save(st, acct_state_file, baseline=baseline)
         return
 
     # Clean expired pending
@@ -277,7 +286,7 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
         print(f"  Found {len(conversations)} new conversations")
     except Exception as e:
         print(f"  Discovery failed: {e}", file=sys.stderr)
-        state_mod.save(st, STATE_FILE, baseline=baseline)
+        state_mod.save(st, acct_state_file, baseline=baseline)
         return
 
     # Phase 1b: Monitor replies to our posted tweets
@@ -294,7 +303,7 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
 
     if not conversations:
         print("  No new conversations. Done.")
-        state_mod.save(st, STATE_FILE, baseline=baseline)
+        state_mod.save(st, acct_state_file, baseline=baseline)
         return
 
     # Sort by diversity-adjusted score
@@ -314,7 +323,7 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
 
     if slots <= 0:
         print(f"  No slots available (pending={pending_count}). Skipping.")
-        state_mod.save(st, STATE_FILE, baseline=baseline)
+        state_mod.save(st, acct_state_file, baseline=baseline)
         return
 
     # Set up poster for autonomous posting
@@ -455,14 +464,14 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
         if evaluation and evaluation.consensus < ESCALATION_THRESHOLD and evaluation.decision == "rejected":
             print(f"    AUTO-REJECTED (consensus {evaluation.consensus:.0%} < {ESCALATION_THRESHOLD:.0%})")
             state_mod._bump_stat(st, "eval_rejected")
-            state_mod.save(st, STATE_FILE, baseline=baseline)
+            state_mod.save(st, acct_state_file, baseline=baseline)
             continue
 
         # Principles gate: hard reject on principles failure
         if evaluation and evaluation.principles_score < 0.70:
             print(f"    AUTO-REJECTED (principles {evaluation.principles_score:.0%}): {evaluation.principles_feedback[:80]}")
             state_mod._bump_stat(st, "principles_rejected")
-            state_mod.save(st, STATE_FILE, baseline=baseline)
+            state_mod.save(st, acct_state_file, baseline=baseline)
             continue
 
         # Classify reply type for quota tracking
@@ -476,7 +485,7 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
 
         if not autonomous:
             # Non-autonomous: send to Telegram for approval
-            state_mod.save(st, STATE_FILE, baseline=baseline)
+            state_mod.save(st, acct_state_file, baseline=baseline)
             url = conv.get("url", f"https://x.com/{author.lstrip('@')}/status/{tweet_id}")
             try:
                 from draft_pipeline import process_draft_pipeline
@@ -492,7 +501,7 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
                 print(f"    Pipeline: {pipeline_result['action']}")
             except Exception as e:
                 print(f"    Pipeline failed: {e}", file=sys.stderr)
-            st, baseline = state_mod.load(STATE_FILE)
+            st, baseline = state_mod.load(acct_state_file)
             continue
 
         # Autonomous mode: apply escalation tiers
@@ -502,18 +511,18 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
             if no_escalate:
                 print(f"    Auto-rejecting (no-escalate mode): {esc_reason}")
                 state_mod._bump_stat(st, "eval_rejected")
-                state_mod.save(st, STATE_FILE, baseline=baseline)
+                state_mod.save(st, acct_state_file, baseline=baseline)
                 continue
 
             if escalated_today >= escalation_max:
                 print(f"    Escalation cap reached ({escalated_today}/{escalation_max}) — auto-rejecting borderline")
                 state_mod._bump_stat(st, "eval_rejected")
-                state_mod.save(st, STATE_FILE, baseline=baseline)
+                state_mod.save(st, acct_state_file, baseline=baseline)
                 continue
 
             # Escalate to Telegram via draft pipeline (registers in state, sends with buttons)
             print(f"    ESCALATING to Telegram: {esc_reason}")
-            state_mod.save(st, STATE_FILE, baseline=baseline)
+            state_mod.save(st, acct_state_file, baseline=baseline)
             url = conv.get("url", f"https://x.com/{author.lstrip('@')}/status/{tweet_id}")
             eval_info = f"consensus={evaluation.consensus:.0%}" if evaluation else "no-eval"
             try:
@@ -530,11 +539,11 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
                 if esc_result['action'] in ('sent_to_telegram', 'registered_no_telegram'):
                     state_mod._bump_stat(st, "escalated")
                     escalated_today += 1
-                    state_mod.save(st, STATE_FILE, baseline=baseline)
+                    state_mod.save(st, acct_state_file, baseline=baseline)
                 print(f"    Escalation: {esc_result['action']} ({eval_info})")
             except Exception as e:
                 print(f"    Escalation send failed: {e}", file=sys.stderr)
-            st, baseline = state_mod.load(STATE_FILE)
+            st, baseline = state_mod.load(acct_state_file)
             quotas = _get_daily_quotas(st)
             continue
 
@@ -590,13 +599,13 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
                     st["restricted_authors"] = restricted[-500:]
             elif "login" in err_msg.lower() or "auth" in err_msg.lower():
                 print(f"    Chrome auth expired — stopping cycle")
-                state_mod.save(st, STATE_FILE, baseline=baseline)
+                state_mod.save(st, acct_state_file, baseline=baseline)
                 break
             else:
                 print(f"    Post failed: {err_msg[:100]}")
 
-        state_mod.save(st, STATE_FILE, baseline=baseline)
-        st, baseline = state_mod.load(STATE_FILE)
+        state_mod.save(st, acct_state_file, baseline=baseline)
+        st, baseline = state_mod.load(acct_state_file)
         quotas = _get_daily_quotas(st)
 
         # Rate limit between posts
@@ -604,8 +613,8 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
             time.sleep(2)
 
     # Final save
-    st, baseline = state_mod.load(STATE_FILE)
-    state_mod.save(st, STATE_FILE, baseline=baseline)
+    st, baseline = state_mod.load(acct_state_file)
+    state_mod.save(st, acct_state_file, baseline=baseline)
 
     # Summary
     posted_final = state_mod.today_count(st, "posted")
@@ -629,4 +638,8 @@ if __name__ == "__main__":
     dry_run = "--dry-run" in sys.argv
     autonomous = "--autonomous" in sys.argv
     no_escalate = "--no-escalate" in sys.argv
-    run(dry_run=dry_run, autonomous=autonomous, no_escalate=no_escalate)
+    account = "fds"
+    for arg in sys.argv:
+        if arg.startswith("--account="):
+            account = arg.split("=", 1)[1]
+    run(dry_run=dry_run, autonomous=autonomous, no_escalate=no_escalate, account=account)

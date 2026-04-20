@@ -95,8 +95,11 @@ def draft_reply(conversation: dict) -> str:
         url=conversation.get("url", ""),
     )
 
-    # Clean env: remove CLAUDECODE to allow nested invocation
-    env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE")}
+    # Clean env: remove CLAUDE* and ANTHROPIC_API_KEY to allow nested invocation.
+    # Without ANTHROPIC_API_KEY, Claude CLI uses Max subscription OAuth (free).
+    # With it, it burns pay-per-token credits which may be depleted.
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith("CLAUDE") and k != "ANTHROPIC_API_KEY"}
     env["PATH"] = os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")
     env["HOME"] = os.environ.get("HOME", str(Path.home()))
 
