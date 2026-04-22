@@ -5,9 +5,14 @@
 import { z } from 'zod'
 import * as fs from 'fs'
 import * as path from 'path'
+import * as yaml from 'yaml'
 
 function stateFilePath(basePath) {
   return path.join(basePath, '.datacore', 'state', 'engagement-state.json')
+}
+
+function configFilePath(basePath) {
+  return path.join(basePath, '1-tracks', 'comms', 'comms-config.yaml')
 }
 
 function loadState(basePath) {
@@ -17,6 +22,16 @@ function loadState(basePath) {
     return JSON.parse(fs.readFileSync(fp, 'utf-8'))
   } catch {
     return null
+  }
+}
+
+function loadConfig(basePath) {
+  const fp = configFilePath(basePath)
+  if (!fs.existsSync(fp)) return { brand: { handle: '@brand' } }
+  try {
+    return yaml.parse(fs.readFileSync(fp, 'utf-8'))
+  } catch {
+    return { brand: { handle: '@brand' } }
   }
 }
 
@@ -94,6 +109,9 @@ export const tools = [
       const state = loadState(ctx.storage.basePath)
       if (!state) return { posted: [], message: 'No engagement state found.' }
 
+      const cfg = loadConfig(ctx.storage.basePath)
+      const handle = cfg.brand?.handle?.replace(/^@/, '') || 'brand'
+
       const days = args.days || 7
       const limit = args.limit || 20
       const cutoff = new Date(Date.now() - days * 86400000).toISOString()
@@ -103,7 +121,6 @@ export const tools = [
         .reverse()
         .slice(0, limit)
 
-      // Aggregate daily stats for the period
       const dailyStats = {}
       for (const [date, stats] of Object.entries(state.daily_stats || {})) {
         if (date >= cutoff.slice(0, 10)) {
@@ -115,7 +132,7 @@ export const tools = [
         count: posted.length,
         replies: posted.map(p => ({
           our_tweet_id: p.our_tweet_id,
-          our_url: `https://x.com/FairDataSociety/status/${p.our_tweet_id}`,
+          our_url: `https://x.com/${handle}/status/${p.our_tweet_id}`,
           target_author: p.target_author,
           reply_text: p.draft_reply,
           posted_at: p.posted_at,

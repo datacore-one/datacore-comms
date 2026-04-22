@@ -7,11 +7,26 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
 
 
-class TestEndToEndAutonomous:
-    """Full pipeline: discover → draft → guardrails → post → state update."""
+def _mock_config():
+    return {
+        "accounts": {
+            "fds": {"env_prefix": "FDS_X_", "daily_limit": 50},
+            "default": {"env_prefix": "X_", "daily_limit": 50},
+        },
+        "limits": {"max_autonomous_per_day": 15},
+        "brand": {"handle": "@test"},
+        "discovery": {},
+        "voice": {},
+        "guardrails": {
+            "anti_patterns": ["WAGMI", "moon"],
+            "max_exclamations": 0,
+        },
+        "model": {},
+    }
 
+
+class TestEndToEndAutonomous:
     def test_full_autonomous_pipeline(self, tmp_path):
-        """Simulates one full cycle of autonomous engagement."""
         import engagement_state as state_mod
         from autonomous_poster import AutonomousPoster
         from guardrails import ContentGuardrails
@@ -24,7 +39,8 @@ class TestEndToEndAutonomous:
         }
 
         with patch.dict(os.environ, env, clear=False):
-            poster = XPoster(account='fds', state_dir=str(tmp_path))
+            poster = XPoster(account='fds', state_dir=str(tmp_path),
+                           config=_mock_config())
 
             guardrails = ContentGuardrails(
                 anti_patterns=["WAGMI", "moon"],
@@ -38,9 +54,9 @@ class TestEndToEndAutonomous:
                 voice_yaml_path=None, guardrails=guardrails,
                 state_mod=state_mod, state_file=state_file,
                 state_dir=str(tmp_path),
+                config=_mock_config(),
             )
 
-            # Clean content — should auto-post
             with patch.object(poster, '_oauth_post',
                             return_value={'data': {'id': 'tweet_001'}}):
                 result = ap.process_draft(
@@ -49,18 +65,15 @@ class TestEndToEndAutonomous:
                 )
             assert result['action'] == 'posted'
 
-            # Dirty content — should escalate
             result = ap.process_draft(
                 "WAGMI friends!", "target_2", "@other",
             )
             assert result['action'] == 'escalated'
 
-            # Verify state has 1 posted, 0 escalated (escalated doesn't write state)
             st = state_mod.load(state_file)
             assert len(st.get('posted', [])) == 1
 
     def test_rate_limit_blocks_excess_posts(self, tmp_path):
-        """Rate limiter prevents more posts than daily_limit."""
         from x_poster import XPoster
         env = {
             'FDS_X_API_KEY': 'k', 'FDS_X_API_SECRET': 's',
@@ -69,7 +82,8 @@ class TestEndToEndAutonomous:
         import pytest
         with patch.dict(os.environ, env, clear=False):
             poster = XPoster(account='fds', daily_limit=2,
-                           state_dir=str(tmp_path))
+                           state_dir=str(tmp_path),
+                           config=_mock_config())
             with patch.object(poster, '_oauth_post',
                             return_value={'data': {'id': '1'}}):
                 poster.post("first")
@@ -78,7 +92,6 @@ class TestEndToEndAutonomous:
                     poster.post("third")
 
     def test_follow_pipeline(self, tmp_path):
-        """Follow DB → Manager → Follow API call chain."""
         from follow_db import FollowDB
         from follow_manager import FollowManager
 
@@ -99,6 +112,60 @@ class TestEndToEndAutonomous:
         assert result['followed'] == 3
         assert poster.follow.call_count == 3
 
-        # Verify DB updated
         stats = db.stats()
         assert stats['by_status'].get('followed', 0) == 3
+
+
+class TestDraftReply:
+    """Test OpenRouter-based draft generation."""
+
+    def test_draft_reply_returns_structured_result(self):
+        from engagement_draft import draft_reply
+
+        with patch("engagement_draft._call_openrouter") as mock_call:
+            mock_call.return_value = {
+                "choices": [{
+                    "message": {"content": "This is a test reply."},
+                    "finish_reason": "stop",
+                }],
+                "usage": {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 20,
+                    "total_tokens": 120,
+                },
+            }
+
+            result = draft_reply(
+                {"author": "@test", "content": "Hello world", "url": "https://x.com/test/1"},
+                config=_mock_config(),
+            )
+
+            assert result["text"] == "This is a test reply."
+            assert result["tokens_used"] == 120
+            assert result["prompt_version"] == "default"
+            assert result["finish_reason"] == "stop"
+
+    def test_draft_reply_uses_fallback_on_failure(self):
+        from engagement_draft import draft_reply
+
+        with patch("engagement_draft._call_openrouter") as mock_call:
+            # Primary fails, fallback succeeds
+            def side_effect(*args, **kwargs):
+                if kwargs.get("model") == "anthropic/claude-sonnet-4":
+                    raise Exception("Primary model error")
+                return {
+                    "choices": [{
+                        "message": {"content": "Fallback reply."},
+                        "finish_reason": "stop",
+                    }],
+                    "usage": {"total_tokens": 80},
+                }
+
+            mock_call.side_effect = side_effect
+
+            result = draft_reply(
+                {"author": "@test", "content": "Hello", "url": ""},
+                config=_mock_config(),
+            )
+            assert result["text"] == "Fallback reply."
+            assert result["model"] == "google/gemini-2.5-flash-preview"

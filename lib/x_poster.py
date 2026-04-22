@@ -2,17 +2,17 @@
 """Multi-account X poster with OAuth 1.0a signing and persistent rate limiting.
 
 Supports: post, reply, quote RT, like, follow, unfollow.
-Reusable across campaigns: FDS, Datacore (@datacore, @mr_data_dc).
+Reusable across any space/brand — accounts configured via comms-config.yaml.
 
 **Rate limits persist to SQLite** — survives systemd oneshot restarts.
 **Kill switch** — checks for .datacore/state/campaign-kill-switch file.
 
-Account credentials use env var prefix convention:
-  {PREFIX}_X_API_KEY, {PREFIX}_X_API_SECRET,
-  {PREFIX}_X_ACCESS_TOKEN, {PREFIX}_X_ACCESS_TOKEN_SECRET
+Account credentials use env var prefix convention defined in comms-config.yaml:
+  {PREFIX}API_KEY, {PREFIX}API_SECRET,
+  {PREFIX}ACCESS_TOKEN, {PREFIX}ACCESS_TOKEN_SECRET
 
 Usage:
-    poster = XPoster(account='fds')
+    poster = XPoster(account='plur')  # loads config from active space
     poster.post("Privacy by architecture, not by promise.")
     poster.reply("Exactly.", tweet_id="123456")
     poster.like("123456")
@@ -33,14 +33,6 @@ from urllib.error import HTTPError
 
 TWEET_URL = "https://api.x.com/2/tweets"
 
-# Map account names to env var prefixes
-ACCOUNT_PREFIXES = {
-    'fds': 'FDS_X_',
-    'jssr': 'JSSR_X_',
-    'datacore': 'DATACORE_X_',
-    'mr_data_dc': 'MRDATA_X_',
-}
-
 # Kill switch — if this file exists, all posting is halted
 KILL_SWITCH_PATH = Path(os.environ.get(
     "DATACORE_ROOT", os.path.expanduser("~/Data")
@@ -53,21 +45,44 @@ class KillSwitchActive(RuntimeError):
 
 
 class XPoster:
-    def __init__(self, account: str, daily_limit: int = 50,
-                 user_id: str = None, state_dir: str = None):
-        prefix = ACCOUNT_PREFIXES.get(account)
-        if not prefix:
-            raise ValueError(
-                f"Unknown account: {account}. "
-                f"Known: {list(ACCOUNT_PREFIXES)}"
-            )
+    def __init__(self, account: str, daily_limit: int = None,
+                 user_id: str = None, state_dir: str = None, config: dict = None):
+        """Initialize poster for a given account.
+
+        Args:
+            account: Account key (must exist in comms-config.yaml accounts)
+            daily_limit: Override daily post limit (default from config)
+            user_id: Needed for like/follow endpoints
+            state_dir: Where to store rate-limits.db
+            config: Optional pre-loaded comms config dict
+        """
+        if config is None:
+            from comms_config import load_config, get_account_credentials
+            self.config = load_config()
+            self._creds = get_account_credentials(account, self.config)
+        else:
+            from comms_config import get_account_credentials
+            self.config = config
+            self._creds = get_account_credentials(account, config)
+
         self.account = account
-        self.api_key = os.environ[f'{prefix}API_KEY']
-        self.api_secret = os.environ[f'{prefix}API_SECRET']
-        self.access_token = os.environ[f'{prefix}ACCESS_TOKEN']
-        self.access_token_secret = os.environ[f'{prefix}ACCESS_TOKEN_SECRET']
-        self.user_id = user_id  # needed for like/follow endpoints
-        self.daily_limit = daily_limit
+        self.api_key = self._creds["consumer_key"]
+        self.api_secret = self._creds["consumer_secret"]
+        self.access_token = self._creds["access_token"]
+        self.access_token_secret = self._creds["access_token_secret"]
+        self.user_id = user_id
+
+        account_cfg = self.config.get("accounts", {}).get(account, {})
+
+        # Validate credentials
+        for key, val in self._creds.items():
+            if not val:
+                raise ValueError(
+                    f"Missing credential for account '{account}': {key} "
+                    f"(check env var with prefix {account_cfg.get('env_prefix', 'X_')})"
+                )
+
+        self.daily_limit = daily_limit or account_cfg.get("daily_limit", 50)
 
         # Persistent rate limit DB
         state_path = state_dir or str(
@@ -168,7 +183,7 @@ class XPoster:
         )
         self._rate_db.commit()
 
-    # --- OAuth 1.0a signing (from x_api.py) ---
+    # --- OAuth 1.0a signing ---
 
     def _percent_encode(self, s: str) -> str:
         return urllib.parse.quote(str(s), safe="")

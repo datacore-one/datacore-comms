@@ -1,129 +1,267 @@
 #!/usr/bin/env python3
-"""Draft engagement replies using Claude Code in headless mode.
+"""Draft engagement replies using OpenRouter API.
 
-Runs `claude -p` from the Data directory so the drafting agent has full
-CLAUDE.md context, comms module docs, brand voice, and example replies.
-No API key needed — uses the local Claude Code auth (OAuth).
+Space-agnostic: loads voice prompt, model selection, and example path
+from comms-config.yaml. Supports prompt A/B testing and model comparison.
+
+Features:
+- Configurable model per brand (default: anthropic/claude-sonnet-4)
+- Prompt versioning for continuous improvement
+- Temperature/top_p control per config
+- Token usage logging for cost tracking
+- Retry with fallback models on failure
 """
 
 import json
 import os
-import subprocess
+import time
 from pathlib import Path
+from typing import Optional
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
+import event_logger
 
 DATA_DIR = Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data")))
 
-PROMPT_TEMPLATE = """You are drafting a reply tweet for @FairDataSociety.
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_MODEL = "anthropic/claude-sonnet-4"
+DEFAULT_FALLBACK = "google/gemini-2.5-flash-preview"
 
-Read this file first — study the VOICE and RHYTHM of these posted replies:
-- 0-personal/1-active/fds/fairdrop/comms/campaigns/fairdrop-launch/february-2026/engagement-replies.md
+
+def _load_voice_template(config: dict) -> str:
+    """Load voice prompt template from config."""
+    voice_cfg = config.get("voice", {})
+    template = voice_cfg.get("prompt_template")
+    if template:
+        return template
+
+    return """You are drafting a reply tweet.
 
 ## Target tweet
-
 Author: {author}
 Tweet: {content}
 URL: {url}
 
-## Voice — THIS IS CRITICAL
+## Voice
+- Conversational and insightful
+- Under 280 characters
+- No emojis, no hashtags, no links
 
-Study the examples in engagement-replies.md. The voice is:
-- **Punchy short openers** that hook: "Swiss jurisdiction > US jurisdiction. Still jurisdiction."
-- **Rhythm**: short. short. then a longer sentence that lands the point.
-- **Wit**: subtle, dry, never forced. "Build it so they can't, not so they won't."
-- **Conversational**, not declarative. You're adding to a conversation, not writing a policy paper.
-- Think: sharp engineer at a bar, not professor at a podium.
-
-DO NOT write flat, lecture-y prose. If it sounds like it belongs in a whitepaper, throw it away and try again.
-
-## Insight — EQUALLY CRITICAL
-
-The reply MUST give the reader something they didn't know or hadn't thought about.
-- A technical insight: "For async transfers you need decentralized storage, not just a direct pipe."
-- A reframing: "Privacy must be architectural, not legislative."
-- A non-obvious connection the author missed.
-
-Being punchy alone isn't enough. Being insightful alone isn't enough. The best replies are BOTH — a sharp delivery of a genuinely new idea. The reader should think "huh, I hadn't considered that."
-
-## Emotional tone — THE VIBE
-
-FDS is builder energy. Not doom. Not cynicism. Not lecturing.
-
-The reply should leave the reader feeling GOOD — like they just met someone who gets the problem AND is doing something about it. Think:
-- Constructive, not just critical. Diagnose briefly, then point toward the solution.
-- Warm confidence: "we've been building this" not "you're all doomed"
-- Ally energy: you're on their side, fighting the same fight
-- If the original tweet is frustrated/angry, validate briefly then redirect toward hope
-
-BAD vibe: "They won't erase the database. You can't smash a backup." (bleak, no way out)
-GOOD vibe: "The real fix isn't smashing cameras — it's architecture where there's nothing to subpoena." (same insight, but points forward)
-
-## Rules
-
-1. NO links — build authority through ideas
-2. Under 280 characters. Shorter is better.
-3. No emojis. No hashtags. No marketing speak.
-4. Don't mention FDS/Fairdrop unless it fits naturally.
-5. Match the conversation's register.
-6. Make ONE sharp, insightful point — not a clever one-liner with no substance.
-7. End on forward energy, not doom.
-
-## Output
-
-Return ONLY the reply text. No quotes, no explanation, no preamble."""
+Return ONLY the reply text."""
 
 
-def draft_reply(conversation: dict) -> str:
-    """Generate a reply draft using Claude Code headless mode.
+def _get_api_key() -> str:
+    """Get OpenRouter API key from env."""
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        # Try Hermes env location as fallback
+        hermes_env = Path.home() / ".hermes" / ".env"
+        if hermes_env.exists():
+            for line in hermes_env.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("OPENROUTER_API_KEY="):
+                    key = line.split("=", 1)[1].strip()
+                    break
+    if not key:
+        raise ValueError(
+            "OPENROUTER_API_KEY not found in environment or ~/.hermes/.env"
+        )
+    return key
 
-    Runs from ~/Data so Claude has full context (CLAUDE.md, comms module,
-    brand voice docs, example replies).
+
+def _build_system_prompt(config: dict) -> str:
+    """Build system prompt from brand config."""
+    brand = config.get("brand", {})
+    name = brand.get("name", "Brand")
+    handle = brand.get("handle", "@brand")
+
+    base = f"""You are the social media voice for {name} ({handle}).
+You draft reply tweets that are sharp, insightful, and conversational.
+Never use emojis, hashtags, or links unless explicitly instructed.
+Stay under 280 characters. Make ONE point well."""
+
+    # Add brand-specific voice instructions if present
+    voice_cfg = config.get("voice", {})
+    extra_instructions = voice_cfg.get("system_instructions")
+    if extra_instructions:
+        base += f"\n\n{extra_instructions}"
+
+    return base
+
+
+def _call_openrouter(
+    messages: list,
+    model: str,
+    api_key: str,
+    temperature: float = 0.7,
+    top_p: float = 0.9,
+    max_tokens: int = 150,
+    timeout: int = 60,
+) -> dict:
+    """Call OpenRouter API. Returns full response dict."""
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "top_p": top_p,
+        "max_tokens": max_tokens,
+    }
+
+    body = json.dumps(payload).encode()
+    req = Request(OPENROUTER_URL, data=body, method="POST")
+    req.add_header("Authorization", f"Bearer {api_key}")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("HTTP-Referer", "https://plur.ai")
+    req.add_header("X-Title", "PLUR Engagement Drafting")
+
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read())
+    except HTTPError as e:
+        error_body = e.read().decode()
+        raise Exception(f"OpenRouter error {e.code}: {error_body}")
+
+
+def draft_reply(
+    conversation: dict,
+    config: dict = None,
+    prompt_version: str = None,
+) -> dict:
+    """Generate a reply draft using OpenRouter API.
 
     Args:
         conversation: dict with author, content, url keys
+        config: comms config dict (or auto-loaded)
+        prompt_version: Optional prompt variant for A/B testing
 
     Returns:
-        Draft reply text (under 280 chars)
+        Dict with keys: text, model, prompt_version, tokens_used, finish_reason
     """
-    prompt = PROMPT_TEMPLATE.format(
+    from comms_config import load_config
+    if config is None:
+        config = load_config()
+
+    voice_cfg = config.get("voice", {})
+    model_cfg = config.get("model", {})
+
+    # Model selection
+    model = model_cfg.get("primary", DEFAULT_MODEL)
+    fallback = model_cfg.get("fallback", DEFAULT_FALLBACK)
+    temperature = model_cfg.get("temperature", 0.7)
+    top_p = model_cfg.get("top_p", 0.9)
+    max_tokens = model_cfg.get("max_tokens", 150)
+
+    # Prompt template
+    template = _load_voice_template(config)
+    user_prompt = template.format(
         author=conversation.get("author", "unknown"),
         content=conversation.get("content", ""),
         url=conversation.get("url", ""),
     )
 
-    # Clean env: remove CLAUDECODE to allow nested invocation
-    env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE")}
-    env["PATH"] = os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")
-    env["HOME"] = os.environ.get("HOME", str(Path.home()))
+    # If example replies path is configured, prepend instruction
+    example_path = voice_cfg.get("example_replies_path")
+    if example_path:
+        full_example_path = DATA_DIR / example_path
+        if full_example_path.exists():
+            examples = full_example_path.read_text()
+            user_prompt = (
+                f"Study these example replies to understand the voice and rhythm:\n\n"
+                f"{examples[:2000]}\n\n"
+                f"---\n\n"
+                f"{user_prompt}"
+            )
 
-    result = subprocess.run(
-        [
-            "claude", "-p",
-            "--model", "sonnet",
-            "--output-format", "text",
-            "--no-session-persistence",
-            "--max-turns", "3",
-        ],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        cwd=str(DATA_DIR),
-        env=env,
-        timeout=120,
-    )
+    # Track prompt version for A/B testing
+    version = prompt_version or voice_cfg.get("prompt_version", "default")
 
-    if result.returncode != 0:
-        raise Exception(f"Claude CLI failed: {result.stderr[:300]}")
+    messages = [
+        {"role": "system", "content": _build_system_prompt(config)},
+        {"role": "user", "content": user_prompt},
+    ]
 
-    text = result.stdout.strip().strip('"').strip("'")
+    api_key = _get_api_key()
+
+    # Try primary model, then fallback
+    used_model = model
+    try:
+        response = _call_openrouter(
+            messages=messages,
+            model=model,
+            api_key=api_key,
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens,
+        )
+    except Exception as primary_error:
+        event_logger.log_event("error", {
+            "stage": "draft",
+            "model": model,
+            "error": str(primary_error),
+            "fallback_attempted": True,
+        })
+        try:
+            response = _call_openrouter(
+                messages=messages,
+                model=fallback,
+                api_key=api_key,
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=max_tokens,
+            )
+            used_model = fallback
+        except Exception as fallback_error:
+            raise Exception(
+                f"Draft failed on primary ({model}): {primary_error} "
+                f"and fallback ({fallback}): {fallback_error}"
+            )
+
+    # Extract response text
+    choice = response.get("choices", [{}])[0]
+    text = choice.get("message", {}).get("content", "").strip()
+    finish_reason = choice.get("finish_reason", "unknown")
+
+    # Extract token usage
+    usage = response.get("usage", {})
+    tokens_used = usage.get("total_tokens", 0)
+    prompt_tokens = usage.get("prompt_tokens", 0)
+    completion_tokens = usage.get("completion_tokens", 0)
 
     # Enforce length
-    if len(text) > 280:
-        for i in range(279, 0, -1):
-            if text[i] in ".!?":
+    max_len = voice_cfg.get("max_length", 280)
+    if len(text) > max_len:
+        for i in range(max_len - 1, 0, -1):
+            if text[i] in ".!":
                 text = text[: i + 1]
                 break
         else:
-            text = text[:277] + "..."
+            text = text[: max_len - 3] + "..."
 
-    return text
+    # Log for A/B testing and cost tracking
+    event_logger.log_event("draft", {
+        "model": used_model,
+        "prompt_version": version,
+        "tokens_used": tokens_used,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "finish_reason": finish_reason,
+        "target_author": conversation.get("author", "unknown"),
+        "chars": len(text),
+    })
+
+    return {
+        "text": text,
+        "model": used_model,
+        "prompt_version": version,
+        "tokens_used": tokens_used,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "finish_reason": finish_reason,
+    }
+
+
+def draft_reply_simple(conversation: dict, config: dict = None) -> str:
+    """Simple interface: returns just the draft text."""
+    result = draft_reply(conversation, config=config)
+    return result["text"]
