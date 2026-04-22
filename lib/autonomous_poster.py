@@ -5,14 +5,15 @@ When guardrails fail: escalate to Telegram for human approval.
 Daily autonomous limit: after N auto-posts, all remaining escalate.
 **Autonomous counter persists to SQLite** — survives systemd oneshot restarts.
 
-Integrates with engagement_state.py to track posted/escalated items
-alongside the existing Telegram-approval pipeline.
+Space-agnostic: loads config from comms-config.yaml.
 """
 import os
 import sqlite3
 import time
 from pathlib import Path
 from typing import Optional
+
+import event_logger
 
 
 class AutonomousPoster:
@@ -22,19 +23,26 @@ class AutonomousPoster:
         notifier,  # object with notify_posted() and escalate_for_approval()
         voice_yaml_path: Optional[str],
         guardrails=None,
-        max_autonomous_per_day: int = 15,
+        max_autonomous_per_day: int = None,
         state_mod=None,  # engagement_state module for tracking
         state_file: Path = None,
         state_dir: str = None,
+        config: dict = None,
     ):
+        from comms_config import load_config
+        if config is None:
+            config = load_config()
+
         self.poster = poster
         self.notifier = notifier
         self.guardrails = guardrails
-        self.max_autonomous_per_day = max_autonomous_per_day
+        limits = config.get("limits", {})
+        self.max_autonomous_per_day = max_autonomous_per_day or limits.get("max_autonomous_per_day", 15)
         self.state_mod = state_mod
         self.state_file = state_file
+        self.config = config
 
-        # Persistent autonomous counter (shares rate-limits.db with XPoster)
+        # Persistent autonomous counter
         sp = state_dir or str(
             Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data")))
             / ".datacore" / "state"
@@ -72,11 +80,7 @@ class AutonomousPoster:
         target_tweet_id: str,
         target_author: str,
     ) -> dict:
-        """Process a draft: auto-post if guardrails pass, else escalate.
-
-        Returns: {'action': 'posted'|'escalated', 'details': ...}
-        """
-        # Over daily autonomous limit → escalate everything
+        """Process a draft: auto-post if guardrails pass, else escalate."""
         if self._get_auto_count() >= self.max_autonomous_per_day:
             self.notifier.escalate_for_approval(
                 draft_text=draft_text,
@@ -84,9 +88,12 @@ class AutonomousPoster:
                 target_author=target_author,
                 reason="Daily autonomous limit reached",
             )
+            event_logger.log_event("escalate", {
+                "reason": "daily_limit",
+                "target_author": target_author,
+            })
             return {'action': 'escalated', 'reason': 'daily_limit'}
 
-        # Run guardrails
         result = self.guardrails.check(draft_text)
         if not result.passed:
             self.notifier.escalate_for_approval(
@@ -95,18 +102,21 @@ class AutonomousPoster:
                 target_author=target_author,
                 reason=f"Guardrail violations: {', '.join(result.violations)}",
             )
+            event_logger.log_event("escalate", {
+                "reason": "guardrail_fail",
+                "violations": result.violations,
+                "target_author": target_author,
+            })
             return {
                 'action': 'escalated',
                 'reason': 'guardrail_fail',
                 'violations': result.violations,
             }
 
-        # Guardrails passed → post
         post_result = self.poster.reply(draft_text, target_tweet_id)
         self._increment_auto_count()
         our_tweet_id = post_result.get('data', {}).get('id', '')
 
-        # Record in engagement state for tracking alongside manual approvals
         if self.state_mod and self.state_file:
             st = self.state_mod.load(self.state_file)
             self.state_mod.mark_seen(st, target_tweet_id)
@@ -127,6 +137,11 @@ class AutonomousPoster:
             target_author=target_author,
             our_tweet_id=our_tweet_id,
         )
+        event_logger.log_event("post", {
+            "mode": "autonomous",
+            "target_author": target_author,
+            "our_tweet_id": our_tweet_id,
+        })
 
         return {
             'action': 'posted',

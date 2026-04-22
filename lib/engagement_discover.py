@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Discover engagement-worthy conversations on X via x.ai API.
 
-Uses Grok's x_search tool to find recent privacy/decentralization conversations.
+Space-agnostic: loads queries and brand config from comms-config.yaml.
+Target communities: AI agents, knowledge management, collective intelligence,
+Crypto+AI intersection, local-first AI, MCP ecosystem, agent memory.
 """
 
 import json
@@ -11,31 +13,18 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from typing import List
 
+import event_logger
 
 XAI_URL = "https://api.x.ai/v1/responses"
 
-# Query templates — run QUERIES_PER_CYCLE per engine run for broader coverage.
-# Aligned with Fairdrop campaign target segments:
-#   1. Surveillance & Big Tech (privacy-conscious professionals)
-#   2. Journalists & press freedom (source protection, whistleblowing)
-#   3. Data breaches & policy (GDPR, surveillance capitalism frustration)
-#   4. AI/agent builders (agentic AI, file handling, private infra)
-#   5. File sharing frustrations (WeTransfer, Google Drive, Dropbox)
-#   6. Cypherpunk & privacy architecture (thoughtful crypto/privacy voices)
-#   7. Crypto/web3 privacy builders (NOT token shills — real builders)
-QUERIES_PER_CYCLE = 7  # Run all queries every cycle for maximum coverage
 
-QUERIES = [
-    "Find recent tweets (last 24h) about government surveillance, mass data collection, metadata tracking, or Big Tech privacy violations from people who are genuinely concerned (not promoting a product). Focus on tweets with real engagement from accounts with >1K followers. Exclude crypto token promotions and @FairDataSociety.",
-    "Find recent tweets (last 24h) from journalists, reporters, or press freedom advocates discussing source protection, secure communication, whistleblower tools, or digital safety for journalists. Focus on tweets from verified journalists or press freedom organizations. Exclude @FairDataSociety.",
-    "Find recent tweets (last 24h) about data breaches, GDPR enforcement, privacy policy outrage, or people frustrated with surveillance capitalism (Google tracking, Meta data selling, etc). Look for tweets expressing genuine frustration, not product promotions. Exclude @FairDataSociety.",
-    "Find recent tweets (last 24h) about AI agents handling files, agentic AI needing private infrastructure, MCP servers for file sharing, or the problem of AI agents and data privacy. Focus on AI/ML builders and researchers. Exclude @FairDataSociety.",
-    "Find recent tweets (last 24h) from people frustrated with WeTransfer, Google Drive, Dropbox, or iCloud — complaining about privacy, file size limits, data collection, or looking for alternatives. Real user complaints, not competitor marketing. Exclude @FairDataSociety.",
-    "Find recent tweets (last 24h) about privacy by design, end-to-end encryption for files, zero-knowledge architectures, or self-sovereign data from thoughtful accounts. Look for conversations where someone is making a genuine argument about privacy architecture, not just promoting a product. Exclude @FairDataSociety.",
-    "Find recent tweets (last 24h) from crypto/web3 builders or cypherpunk voices discussing privacy infrastructure, data sovereignty, decentralized identity, or censorship resistance. EXCLUDE token price discussions, airdrop promotions, and 'Good morning crypto' style tweets. Include only people making substantive technical or philosophical arguments. Exclude @FairDataSociety.",
-]
+def _get_system_prompt(config: dict) -> str:
+    """Build system prompt from brand config."""
+    brand = config.get("brand", {})
+    handle = brand.get("handle", "@brand")
+    name = brand.get("name", "Brand")
 
-SYSTEM_PROMPT = """You are a research assistant finding conversations worth engaging with for @FairDataSociety — a project building privacy-first file sharing (Fairdrop) and data sovereignty infrastructure.
+    return f"""You are a research assistant finding conversations worth engaging with for {handle} — {name}.
 
 IMPORTANT FILTERING RULES:
 - EXCLUDE tweets that are just promoting a crypto token or DeFi project
@@ -46,87 +35,124 @@ IMPORTANT FILTERING RULES:
 - ONLY include tweets where reply_settings is "everyone" — i.e. anyone can reply
 - PREFER tweets from real people expressing genuine opinions, frustrations, or insights
 - PREFER tweets with real engagement (replies, not just likes from bots)
-- PREFER journalists, researchers, developers, privacy advocates, tech professionals
+- PREFER developers, researchers, builders, privacy advocates, AI practitioners
 - PREFER accounts with under 100K followers — large accounts often restrict replies
 
 For each relevant tweet found, return a JSON array of objects with these fields:
 - tweet_id: the tweet's ID
 - author: @handle of the tweet author
 - content: the full tweet text
-- url: the tweet URL (https://x.com/{author}/status/{tweet_id})
+- url: the tweet URL (https://x.com/{{author}}/status/{{tweet_id}})
 - views: estimated view count (number, or 0 if unknown)
-- relevance: 1-10 score for how relevant this is to privacy, data sovereignty, or file sharing
+- relevance: 1-10 score for how relevant this is
 - reply_settings: "everyone", "mentioned_users", "following", "subscribers", or "unknown"
 
 Return ONLY the JSON array, no other text. If no relevant tweets found, return [].
 Only include tweets with relevance >= 7 AND reply_settings of "everyone" or "unknown"."""
 
 
-def discover(state: dict, xai_api_key: str = None) -> List[dict]:
+def discover(state: dict, xai_api_key: str = None, config: dict = None) -> List[dict]:
     """Find conversations to engage with.
 
-    Runs QUERIES_PER_CYCLE queries per call for broader coverage across
-    different audience segments.
-
     Args:
-        state: engagement state dict (for rotation index, seen list, config)
+        state: engagement state dict
         xai_api_key: x.ai API key (or from env)
+        config: comms config dict (or auto-loaded)
 
     Returns:
-        List of conversation dicts: [{tweet_id, author, content, url, views, relevance}]
+        List of conversation dicts
     """
+    from comms_config import load_config
+    if config is None:
+        config = load_config()
+
     api_key = xai_api_key or os.environ.get("XAI_API_KEY")
     if not api_key:
         raise ValueError("XAI_API_KEY not set")
 
-    config = state.get("config", {})
+    discovery_cfg = config.get("discovery", {})
+    queries = discovery_cfg.get("queries", [])
+    queries_per_cycle = discovery_cfg.get("queries_per_cycle", 3)
+    min_relevance = discovery_cfg.get("min_relevance", 7)
+
+    brand = config.get("brand", {})
+    excluded_handles = set(brand.get("excluded_handles", []))
+    our_handle = brand.get("handle", "").lstrip("@")
+    if our_handle:
+        excluded_handles.add(our_handle)
+
+    config_state = state.get("config", {})
     seen = state.get("seen", {})
-    blacklist = set(config.get("blacklist_authors", []))
-    blacklist.add("@FairDataSociety")
+    blacklist = set(config_state.get("blacklist_authors", []))
+    blacklist.update(excluded_handles)
 
     now = datetime.now(timezone.utc)
     from_date = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     all_conversations = []
-    seen_tweet_ids = set()  # Dedup across queries
+    seen_tweet_ids = set()
 
-    for _ in range(QUERIES_PER_CYCLE):
-        idx = config.get("query_rotation_index", 0) % len(QUERIES)
-        query = QUERIES[idx]
-        config["query_rotation_index"] = idx + 1
+    # Rotate queries
+    rotation_idx = config_state.get("query_rotation_index", 0)
+    total_queries = len(queries)
+    if total_queries == 0:
+        event_logger.log_event("error", {"stage": "discover", "reason": "no queries configured"})
+        return []
+
+    for i in range(min(queries_per_cycle, total_queries)):
+        idx = (rotation_idx + i) % total_queries
+        query = queries[idx]
 
         try:
-            convs = _run_query(api_key, query, from_date)
+            convs = _run_query(api_key, query, from_date, config)
         except Exception as e:
+            event_logger.log_event("error", {"stage": "discover", "query_idx": idx, "error": str(e)})
             print(f"    Query {idx} failed: {e}")
             continue
 
-        # Filter and dedup
         for conv in convs:
             tid = str(conv.get("tweet_id", ""))
-            author = conv.get("author", "")
+            author = conv.get("author", "").lstrip("@")
             reply_settings = conv.get("reply_settings", "unknown")
+            relevance = conv.get("relevance", 0)
+
             if tid in seen or tid in seen_tweet_ids:
                 continue
-            if author.lower() in {b.lower() for b in blacklist}:
+            if author.lower() in {b.lower().lstrip("@") for b in blacklist}:
                 continue
-            # Skip tweets with known reply restrictions
             if reply_settings in ("mentioned_users", "following", "subscribers", "verified"):
                 continue
+            if relevance < min_relevance:
+                continue
+
             seen_tweet_ids.add(tid)
             all_conversations.append(conv)
 
-    # Sort by relevance (highest first)
+    config_state["query_rotation_index"] = (rotation_idx + queries_per_cycle) % total_queries
+    state["config"] = config_state
+
     all_conversations.sort(key=lambda c: c.get("relevance", 0), reverse=True)
+
+    event_logger.log_event("discover", {
+        "queries_run": min(queries_per_cycle, total_queries),
+        "conversations_found": len(all_conversations),
+    })
+
     return all_conversations
 
 
-def _run_query(api_key: str, query: str, from_date: str) -> List[dict]:
+def _run_query(api_key: str, query: str, from_date: str, config: dict) -> List[dict]:
     """Execute a single x.ai discovery query."""
+    brand = config.get("brand", {})
+    excluded = list(brand.get("excluded_handles", []))
+    our_handle = brand.get("handle", "").lstrip("@")
+    if our_handle and our_handle not in excluded:
+        excluded.append(our_handle)
+
     payload = {
         "model": "grok-4-1-fast-non-reasoning",
         "input": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": _get_system_prompt(config)},
             {"role": "user", "content": query},
         ],
         "tools": [
@@ -134,7 +160,7 @@ def _run_query(api_key: str, query: str, from_date: str) -> List[dict]:
                 "type": "x_search",
                 "x_search": {
                     "from_date": from_date,
-                    "excluded_x_handles": ["FairDataSociety"],
+                    "excluded_x_handles": excluded,
                 },
             }
         ],
@@ -144,7 +170,7 @@ def _run_query(api_key: str, query: str, from_date: str) -> List[dict]:
     req = Request(XAI_URL, data=body, method="POST")
     req.add_header("Authorization", f"Bearer {api_key}")
     req.add_header("Content-Type", "application/json")
-    req.add_header("User-Agent", "DatacoreEngagement/1.0")
+    req.add_header("User-Agent", "DatacoreEngagement/2.0")
 
     try:
         with urlopen(req, timeout=30) as resp:
@@ -165,10 +191,7 @@ def _run_query(api_key: str, query: str, from_date: str) -> List[dict]:
 
 def _parse_conversations(text: str) -> List[dict]:
     """Extract JSON array from LLM response text."""
-    # Find JSON array in text
     text = text.strip()
-
-    # Try direct parse
     try:
         result = json.loads(text)
         if isinstance(result, list):
@@ -176,7 +199,6 @@ def _parse_conversations(text: str) -> List[dict]:
     except json.JSONDecodeError:
         pass
 
-    # Try to find [...] in text
     start = text.find("[")
     end = text.rfind("]")
     if start >= 0 and end > start:

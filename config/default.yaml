@@ -1,0 +1,60 @@
+# Default comms configuration template
+# Copy this to your space: {SPACE_ROOT}/1-tracks/comms/comms-config.yaml
+
+brand:
+  name: "Your Brand"
+  handle: "@your_handle"
+  tagline: "Your tagline"
+  excluded_handles:
+    - "your_handle"
+
+accounts:
+  default:
+    env_prefix: "X_"
+    daily_limit: 50
+
+model:
+  primary: "anthropic/claude-sonnet-4"
+  fallback: "google/gemini-2.5-flash-preview"
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 150
+  default_prompt_version: "default"
+
+discovery:
+  queries_per_cycle: 3
+  min_relevance: 7
+  cooldown_hours: 24
+  queries:
+    - "Find recent tweets (last 24h) relevant to your domain from real people with genuine engagement. Exclude promotions and engagement farming."
+
+voice:
+  max_length: 280
+  example_replies_path: null
+  prompt_version: "default"
+  prompt_template: |
+    You are drafting a reply tweet.
+
+    ## Target tweet
+    Author: {author}
+    Tweet: {content}
+    URL: {url}
+
+    ## Voice
+    - Conversational and insightful
+    - Under 280 characters
+    - No emojis, no hashtags, no links
+
+    Return ONLY the reply text.
+
+limits:
+  max_per_hour: 5
+  max_per_day: 15
+  max_pending: 30
+  pending_expiry_hours: 4
+  max_autonomous_per_day: 15
+
+guardrails:
+  anti_patterns: ["WAGMI", "moon", "lambo"]
+  max_exclamations: 1
+  max_capitals_ratio: 0.3

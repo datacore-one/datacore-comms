@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """Monitor replies to our posted tweets and queue follow-up conversations.
 
-Uses x.ai x_search to find replies to @FairDataSociety's recent tweets.
-Drafts follow-up replies and sends to Telegram for approval.
-
-Run as part of the hourly engagement engine cycle.
+Space-agnostic: loads brand handle from comms-config.yaml.
 """
 
 import json
@@ -14,14 +11,14 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from typing import List
 
-import engagement_draft as draft_mod
-
+import event_logger
+from comms_config import load_config
 
 XAI_URL = "https://api.x.ai/v1/responses"
 
-FOLLOW_UP_SYSTEM_PROMPT = """You are drafting follow-up replies for @FairDataSociety in an ongoing conversation about privacy and data sovereignty.
+FOLLOW_UP_SYSTEM_PROMPT = """You are drafting follow-up replies in an ongoing conversation.
 
-CONTEXT: Someone replied to a tweet from @FairDataSociety. Draft a reply that continues the conversation naturally.
+CONTEXT: Someone replied to our tweet. Draft a reply that continues the conversation naturally.
 
 STYLE:
 - Short and sharp (under 240 chars)
@@ -35,17 +32,12 @@ STYLE:
 Return ONLY the reply text, nothing else."""
 
 
-def find_replies_to_our_tweets(posted_items: list, xai_api_key: str = None) -> List[dict]:
-    """Search for replies to our recent posted tweets.
+def find_replies_to_our_tweets(posted_items: list, xai_api_key: str = None,
+                               config: dict = None) -> List[dict]:
+    """Search for replies to our recent posted tweets."""
+    if config is None:
+        config = load_config()
 
-    Args:
-        posted_items: List of posted items from state (last 48h)
-        xai_api_key: x.ai API key
-
-    Returns:
-        List of reply dicts: [{their_tweet_id, their_author, their_content,
-                               our_tweet_id, our_content, url}]
-    """
     api_key = xai_api_key or os.environ.get("XAI_API_KEY")
     if not api_key:
         raise ValueError("XAI_API_KEY not set")
@@ -53,7 +45,9 @@ def find_replies_to_our_tweets(posted_items: list, xai_api_key: str = None) -> L
     if not posted_items:
         return []
 
-    # Only check tweets posted in last 48h
+    brand = config.get("brand", {})
+    our_handle = brand.get("handle", "@brand").lstrip("@")
+
     cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
     recent = [
         p for p in posted_items
@@ -64,27 +58,26 @@ def find_replies_to_our_tweets(posted_items: list, xai_api_key: str = None) -> L
     if not recent:
         return []
 
-    # Build query: search for replies to our recent tweets
     our_urls = [
-        f"https://x.com/FairDataSociety/status/{p['our_tweet_id']}"
-        for p in recent[:10]  # Cap at 10 to keep query manageable
+        f"https://x.com/{our_handle}/status/{p['our_tweet_id']}"
+        for p in recent[:10]
     ]
 
     query = (
-        f"Find tweets from the last 48 hours that are direct replies to @FairDataSociety. "
+        f"Find tweets from the last 48 hours that are direct replies to @{our_handle}. "
         f"Focus on these specific tweet URLs: {', '.join(our_urls[:5])}. "
         f"Return only genuine replies where someone is engaging with the argument, "
         f"not just likes, quote-tweets with no substance, or spam."
     )
 
-    system_prompt = """Find replies to the specified @FairDataSociety tweets.
+    system_prompt = f"""Find replies to the specified @{our_handle} tweets.
 
 For each reply found, return a JSON array with:
 - their_tweet_id: ID of their reply tweet
 - their_author: @handle of the person who replied
 - their_content: full text of their reply
-- our_tweet_id: ID of the @FairDataSociety tweet they replied to
-- our_content: text of the original @FairDataSociety tweet (if findable)
+- our_tweet_id: ID of the @{our_handle} tweet they replied to
+- our_content: text of the original @{our_handle} tweet (if findable)
 - url: URL of their reply tweet
 
 Return ONLY the JSON array. If no genuine replies found, return []."""
@@ -127,14 +120,7 @@ Return ONLY the JSON array. If no genuine replies found, return []."""
 
 
 def draft_follow_up(reply_item: dict, xai_api_key: str = None) -> str:
-    """Draft a follow-up reply to someone who replied to us.
-
-    Args:
-        reply_item: {their_content, their_author, our_content}
-
-    Returns:
-        Draft reply text
-    """
+    """Draft a follow-up reply."""
     api_key = xai_api_key or os.environ.get("XAI_API_KEY")
     if not api_key:
         raise ValueError("XAI_API_KEY not set")
@@ -177,13 +163,11 @@ def draft_follow_up(reply_item: dict, xai_api_key: str = None) -> str:
     raise Exception("No draft returned from x.ai")
 
 
-def monitor(state: dict, xai_api_key: str = None) -> List[dict]:
-    """Check for replies to our tweets and return new conversations to queue.
+def monitor(state: dict, xai_api_key: str = None, config: dict = None) -> List[dict]:
+    """Check for replies to our tweets."""
+    if config is None:
+        config = load_config()
 
-    Returns list of conversation items ready to add as pending drafts.
-    Each item has the same shape as a discovered conversation but with
-    conversation_context set.
-    """
     api_key = xai_api_key or os.environ.get("XAI_API_KEY")
     posted = state.get("posted", [])
     already_seen_replies = {
@@ -191,7 +175,7 @@ def monitor(state: dict, xai_api_key: str = None) -> List[dict]:
         for p in state.get("conversations", [])
     }
 
-    replies = find_replies_to_our_tweets(posted, api_key)
+    replies = find_replies_to_our_tweets(posted, api_key, config)
 
     new_conversations = []
     for reply in replies:
@@ -220,7 +204,6 @@ def monitor(state: dict, xai_api_key: str = None) -> List[dict]:
 
 
 def _parse_replies(text: str) -> List[dict]:
-    """Extract JSON array from response."""
     text = text.strip()
     try:
         result = json.loads(text)

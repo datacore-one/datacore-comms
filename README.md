@@ -178,6 +178,61 @@ Before posting, content must pass (7+ checks required):
 - [ ] Platform fit (right format/length)
 - [ ] Timing (optimal posting time)
 
+## Model Selection & A/B Testing
+
+The engagement engine supports configurable LLM models via OpenRouter:
+
+```yaml
+model:
+  primary: "anthropic/claude-sonnet-4"
+  fallback: "google/gemini-2.5-flash-preview"
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 150
+  default_prompt_version: "v2-memory-architect"
+```
+
+### Prompt Versions
+
+Define multiple prompt versions in `voice.prompt_versions` for A/B testing:
+
+```yaml
+voice:
+  prompt_version: "v2-memory-architect"
+  prompt_versions:
+    v1-minimal:
+      description: "Minimal prompt"
+      system: "Be concise."
+      template: "..."
+    v2-memory-architect:
+      description: "Full persona"
+      system: "You are the Memory Architect..."
+      template: "..."
+```
+
+Switch versions by changing `model.default_prompt_version` or passing
+`prompt_version` to `engagement_draft.draft_reply()`.
+
+### Performance Tracking
+
+```bash
+cd ~/Data/.datacore/modules/comms/lib
+python prompt_tracker.py --report
+python prompt_tracker.py --compare v1-minimal v2-memory-architect
+```
+
+Tracks: drafts per version, average token usage, finish rates, model fallback frequency.
+
+### Supported Models (OpenRouter)
+
+Any OpenRouter model ID works. Recommended:
+- `anthropic/claude-sonnet-4` -- best quality for nuanced engagement
+- `google/gemini-2.5-flash-preview` -- fast, cheap, good fallback
+- `moonshotai/kimi-k2.6` -- long context, good for analysis
+- `openai/gpt-4o-mini` -- cost-effective for high volume
+
+Token usage and model selection are logged per draft for cost optimization.
+
 ## Environment Variables
 
 Optional (Late API handles auth via OAuth):

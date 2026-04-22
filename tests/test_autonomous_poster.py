@@ -6,9 +6,18 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
 
 
-class TestAutonomousPoster:
-    """Autonomous poster applies guardrails then posts or escalates."""
+def _mock_config():
+    return {
+        "accounts": {"default": {"env_prefix": "X_", "daily_limit": 50}},
+        "limits": {"max_autonomous_per_day": 15},
+        "brand": {},
+        "discovery": {},
+        "voice": {},
+        "guardrails": {},
+    }
 
+
+class TestAutonomousPoster:
     def test_passes_guardrails_posts_directly(self, tmp_path):
         from autonomous_poster import AutonomousPoster
         poster = MagicMock()
@@ -23,6 +32,7 @@ class TestAutonomousPoster:
                 return_value=MagicMock(passed=True, violations=[])
             )),
             state_dir=str(tmp_path),
+            config=_mock_config(),
         )
         result = ap.process_draft(
             draft_text="Clean content here",
@@ -46,6 +56,7 @@ class TestAutonomousPoster:
                 return_value=MagicMock(passed=False, violations=["anti-pattern"])
             )),
             state_dir=str(tmp_path),
+            config=_mock_config(),
         )
         result = ap.process_draft(
             draft_text="WAGMI friends!",
@@ -71,8 +82,9 @@ class TestAutonomousPoster:
             )),
             max_autonomous_per_day=2,
             state_dir=str(tmp_path),
+            config=_mock_config(),
         )
         ap.process_draft("a", "1", "@x")
         ap.process_draft("b", "2", "@y")
         result = ap.process_draft("c", "3", "@z")
-        assert result['action'] == 'escalated'  # over daily autonomous limit
+        assert result['action'] == 'escalated'
