@@ -1,0 +1,350 @@
+# Watchlist for PLUR.ai (@plur_ai)
+# Categories: thought_leader, ecosystem, competitor, journalist, organization, builder
+# Review: weekly refresh recommended
+#
+# Sources: influencer-targets.md (18 targets with tiers), campaign-plan.md,
+#          plur-messaging-positioning-2026-04-01.md, AI dev tools ecosystem mapping.
+#
+# Handles marked [VERIFY] need manual confirmation on X.
+
+accounts:
+
+  # ── Tier 1: Direct Competitors / Memory Space ──────────────────────────────
+  # From influencer-targets.md -- they live the AI memory problem
+
+  - handle: "@DhravyaShah"
+    name: "Dhravya Shah"
+    category: competitor
+    topics: ["AI memory", "Supermemory", "Claude plugins"]
+    priority: high
+    notes: "Founder/CEO of Supermemory ($3M raised, 10K GH stars). Built claude-supermemory. Direct competitor. Engage technically. [VERIFY handle]"
+
+  - handle: "@taranjeetio"
+    name: "Taranjeet Singh"
+    category: competitor
+    topics: ["AI memory", "Mem0", "agent infrastructure"]
+    priority: high
+    notes: "Founder/CEO of Mem0 (YC S24, $24M raised). Memory layer for AI apps. PLUR differentiates on local-first."
+
+  - handle: "@charlespacker"
+    name: "Charles Packer"
+    category: competitor
+    topics: ["AI memory", "Letta", "MemGPT", "LLM-as-OS"]
+    priority: high
+    notes: "Co-founder/CEO Letta (formerly MemGPT). Virtual memory for LLMs. PLUR is complementary -- memory layer vs agent harness."
+
+  - handle: "@thedotmack"
+    name: "Alex Newman"
+    category: competitor
+    topics: ["Claude memory", "claude-mem", "persistent context"]
+    priority: high
+    notes: "Creator of claude-mem (40K GitHub stars). Same pain as PLUR but Claude-only. Offer interop angle."
+
+  # ── Tier 2: Claude Code Power Users & Content Creators ─────────────────────
+
+  - handle: "@AnthropicAI"
+    name: "Anthropic"
+    category: ecosystem
+    topics: ["Claude", "AI safety", "LLM", "constitutional AI"]
+    priority: high
+    notes: "Claude's creator. Monitor for Claude Code announcements, feature drops, ecosystem news."
+
+  - handle: "@bcherny"
+    name: "Boris Cherny"
+    category: ecosystem
+    topics: ["Claude Code", "AI coding", "developer tools"]
+    priority: high
+    notes: "Creator and Head of Claude Code at Anthropic. Tips threads get 8.5M views. Demonstrate, don't pitch."
+
+  - handle: "@ykdojo"
+    name: "YK Sugi"
+    category: thought_leader
+    topics: ["Claude Code tips", "agentic coding", "AI workflows"]
+    priority: high
+    notes: "45 Claude Code tips repo (6.6K GH stars). Go-to Claude Code educator. PLUR solves his 'context is milk' tip."
+
+  - handle: "@adocomplete"
+    name: "Ado Kukic"
+    category: ecosystem
+    topics: ["Claude Code", "Anthropic DevRel", "AI tips"]
+    priority: high
+    notes: "Developer Relations at Anthropic. 'Advent of Claude' series. Insider who educates the community."
+
+  - handle: "@PoSoftOfficial"
+    name: "Povilas Korop"
+    category: thought_leader
+    topics: ["AI Coding Daily", "Claude Code", "AI coding tools"]
+    priority: high
+    notes: "AI Coding Daily newsletter + YouTube. Weekly Claude Code coverage. Perfect tutorial partner. [VERIFY handle]"
+
+  - handle: "@ianpaterson"
+    name: "Ian L. Paterson"
+    category: builder
+    topics: ["persistent memory", "Claude Code", "MEMORY.md"]
+    priority: high
+    notes: "Wrote 'How I Built Persistent Memory for Claude Code' blog. Built manual PLUR across 34 projects."
+
+  # ── Tier 3: AI Dev Tools / MCP Ecosystem ────────────────────────────────────
+
+  - handle: "@dendeli"
+    name: "Den Delimarsky"
+    category: ecosystem
+    topics: ["MCP", "developer tools", "Microsoft"]
+    priority: high
+    notes: "MCP Steering Committee member. Core MCP maintainer. PLUR as exemplary MCP implementation. [VERIFY handle]"
+
+  - handle: "@danielnest"
+    name: "Daniel Nest"
+    category: thought_leader
+    topics: ["AI newsletter", "Claude Code", "Obsidian", "second brain"]
+    priority: high
+    notes: "Why Try AI Substack. Published Claude Code + Obsidian second brain guide. PLUR fits his narrative."
+
+  - handle: "@kennethreitz"
+    name: "Kenneth Reitz"
+    category: thought_leader
+    topics: ["Python", "open source", "developer tools", "Obsidian"]
+    priority: high
+    notes: "Creator of Python requests library. Built 467-file Obsidian vault as second brain for Claude Code."
+
+  - handle: "@davidsoriaparra"
+    name: "David Soria Parra"
+    category: ecosystem
+    topics: ["MCP", "Anthropic", "protocol design"]
+    priority: medium
+    notes: "Anthropic MoTS, co-creator of MCP. Approach via community contributions. [VERIFY handle]"
+
+  # ── Tier 4: PKM + AI Intersection ──────────────────────────────────────────
+
+  - handle: "@fortelabs"
+    name: "Tiago Forte"
+    category: thought_leader
+    topics: ["second brain", "PKM", "AI knowledge management"]
+    priority: high
+    notes: "Building a Second Brain author. 'AI Second Brain' (March 2026). 100K+ BASB alumni audience."
+
+  - handle: "@iannuttall"
+    name: "Ian Nuttall"
+    category: builder
+    topics: ["internet businesses", "AI shipping", "build in public"]
+    priority: medium
+    notes: "Serial builder with 6+7 figure exits. Ships with AI daily. 'Install once, never re-explain' resonates."
+
+  - handle: "@remisharoon"
+    name: "Remis Haroon"
+    category: thought_leader
+    topics: ["AI tool comparison", "Claude Code", "Cursor", "Copilot"]
+    priority: medium
+    notes: "Tested Claude Code, Cursor, Copilot, Windsurf for 30 days each. Cross-tool memory pitch."
+
+  # ── Tier 5: Strategic / Aspirational ────────────────────────────────────────
+
+  - handle: "@varunpbhardwaj"
+    name: "Varun Pratap Bhardwaj"
+    category: competitor
+    topics: ["AI memory", "local-first", "EU AI Act", "benchmarks"]
+    priority: medium
+    notes: "Creator of SuperLocalMemory. Published '5 AI Memory Systems Compared'. Getting PLUR added is instant credibility. [VERIFY handle]"
+
+  - handle: "@lennyrachitsky"
+    name: "Lenny Rachitsky"
+    category: thought_leader
+    topics: ["product growth", "developer tools", "podcast"]
+    priority: low
+    notes: "Top product newsletter/podcast. Interviewed Boris Cherny. Aspirational but high-impact."
+
+  # ── From campaign-plan.md: Existing Outreach Targets ────────────────────────
+
+  - handle: "@cathrynlavery"
+    name: "Cathryn Lavery"
+    category: thought_leader
+    topics: ["productivity", "AI workflows", "knowledge management"]
+    priority: medium
+    notes: "13.2K followers. From campaign-plan.md existing targets."
+
+  - handle: "@internetvin"
+    name: "internetVin"
+    category: thought_leader
+    topics: ["AI tools", "Claude Code", "productivity"]
+    priority: medium
+    notes: "10.7K followers. Active AI tools commentator."
+
+  - handle: "@gregisenberg"
+    name: "Greg Isenberg"
+    category: thought_leader
+    topics: ["startups", "AI products", "community building"]
+    priority: high
+    notes: "624K followers. Startup and AI product builder. High-reach target."
+
+  - handle: "@mattshumer_"
+    name: "Matt Shumer"
+    category: builder
+    topics: ["AI agents", "open source AI", "coding tools"]
+    priority: high
+    notes: "AI agent builder. Engaged community."
+
+  # ── Coding Agent Ecosystem ──────────────────────────────────────────────────
+
+  - handle: "@cursor_ai"
+    name: "Cursor"
+    category: ecosystem
+    topics: ["AI coding", "code editor", "LLM integration"]
+    priority: high
+    notes: "Major AI coding editor. PLUR works with Cursor via MCP. Monitor for integration opportunities."
+
+  - handle: "@windsurf_ai"
+    name: "Windsurf"
+    category: ecosystem
+    topics: ["AI coding", "code editor", "agentic IDE"]
+    priority: medium
+    notes: "AI coding editor (formerly Codeium). PLUR supports Windsurf. [VERIFY handle]"
+
+  - handle: "@cline_ai"
+    name: "Cline"
+    category: ecosystem
+    topics: ["AI coding", "VS Code", "autonomous coding"]
+    priority: medium
+    notes: "Autonomous coding agent for VS Code. Potential PLUR integration. [VERIFY handle]"
+
+  - handle: "@aider_ai"
+    name: "Aider"
+    category: ecosystem
+    topics: ["AI pair programming", "terminal coding", "open source"]
+    priority: medium
+    notes: "AI pair programming in terminal. Open source. Paul Gauthier's project. [VERIFY handle]"
+
+  - handle: "@continuedev"
+    name: "Continue"
+    category: ecosystem
+    topics: ["AI coding", "open source", "IDE extension"]
+    priority: medium
+    notes: "Open-source AI coding assistant. MCP-compatible. [VERIFY handle]"
+
+  # ── AI/LLM Researchers & Builders ──────────────────────────────────────────
+
+  - handle: "@karpathy"
+    name: "Andrej Karpathy"
+    category: thought_leader
+    topics: ["AI", "neural networks", "LLM", "AI education"]
+    priority: high
+    notes: "Former Tesla/OpenAI AI leader. Hugely influential AI educator. Aspirational target."
+
+  - handle: "@swyx"
+    name: "Swyx (Shawn Wang)"
+    category: thought_leader
+    topics: ["AI engineering", "developer tools", "Latent Space"]
+    priority: high
+    notes: "Latent Space podcast/newsletter. Defined the 'AI engineer' role. Key voice in AI dev tools."
+
+  - handle: "@simonw"
+    name: "Simon Willison"
+    category: thought_leader
+    topics: ["LLM tools", "developer tools", "open source", "datasette"]
+    priority: high
+    notes: "Django co-creator. Prolific LLM tooling blogger. llm CLI, datasette. High developer trust."
+
+  - handle: "@hwchase17"
+    name: "Harrison Chase"
+    category: ecosystem
+    topics: ["LangChain", "LangGraph", "AI agents", "RAG"]
+    priority: medium
+    notes: "CEO of LangChain. Agent framework ecosystem. Memory is complementary to orchestration."
+
+  - handle: "@jxnlco"
+    name: "Jason Liu"
+    category: builder
+    topics: ["structured outputs", "instructor", "LLM engineering"]
+    priority: medium
+    notes: "Creator of instructor library. Practical LLM engineering. [VERIFY handle]"
+
+  - handle: "@joaomdmoura"
+    name: "Joao Moura"
+    category: builder
+    topics: ["CrewAI", "multi-agent", "AI agents"]
+    priority: medium
+    notes: "Creator of CrewAI. Multi-agent framework. PLUR provides cross-agent memory. [VERIFY handle]"
+
+  # ── AI Productivity & Developer Influencers ─────────────────────────────────
+
+  - handle: "@mckaywrigley"
+    name: "McKay Wrigley"
+    category: thought_leader
+    topics: ["AI coding", "developer productivity", "AI tools"]
+    priority: medium
+    notes: "AI developer tools builder. Chatbot UI creator. Active AI coding community."
+
+  - handle: "@t3dotgg"
+    name: "Theo Browne"
+    category: thought_leader
+    topics: ["TypeScript", "developer tools", "AI coding", "web dev"]
+    priority: medium
+    notes: "t3.gg founder. Massive YouTube following for dev tools. Covers AI coding tools."
+
+  - handle: "@levelsio"
+    name: "Pieter Levels"
+    category: builder
+    topics: ["indie hacking", "AI products", "build in public"]
+    priority: medium
+    notes: "Nomad List, Photo AI founder. Ships fast with AI. Huge indie hacker following."
+
+  - handle: "@RazaHabib_"
+    name: "Raza Habib"
+    category: thought_leader
+    topics: ["LLM observability", "Humanloop", "AI engineering"]
+    priority: low
+    notes: "Humanloop CEO. LLM observability and evaluation. Adjacent tooling. [VERIFY handle]"
+
+  # ── Open Source AI Project Leads ────────────────────────────────────────────
+
+  - handle: "@OpenClaw"
+    name: "OpenClaw"
+    category: ecosystem
+    topics: ["AI assistant", "open source", "plugins", "gateway"]
+    priority: high
+    notes: "PLUR has native OpenClaw integration via @plur-ai/claw. Core ecosystem partner. [VERIFY handle]"
+
+  - handle: "@ollama"
+    name: "Ollama"
+    category: ecosystem
+    topics: ["local LLM", "open source", "AI inference"]
+    priority: medium
+    notes: "Local LLM runner. Aligned on local-first philosophy. [VERIFY handle]"
+
+  - handle: "@LMStudioAI"
+    name: "LM Studio"
+    category: ecosystem
+    topics: ["local LLM", "model management", "inference"]
+    priority: low
+    notes: "Local LLM desktop app. Local-first alignment. [VERIFY handle]"
+
+  - handle: "@huggingface"
+    name: "Hugging Face"
+    category: ecosystem
+    topics: ["open source AI", "model hub", "ML community"]
+    priority: medium
+    notes: "Largest open-source AI community. PLUR packs could integrate with HF ecosystem."
+
+  # ── Tech Media Covering AI Coding ──────────────────────────────────────────
+
+  - handle: "@ThePrimeagen"
+    name: "ThePrimeagen"
+    category: thought_leader
+    topics: ["coding", "developer tools", "AI coding", "Rust"]
+    priority: medium
+    notes: "Developer content creator. Covers AI coding tools with skeptical, technical lens."
+
+  - handle: "@AIEngineerWorld"
+    name: "AI Engineer"
+    category: organization
+    topics: ["AI engineering", "conferences", "developer tools"]
+    priority: medium
+    notes: "AI Engineer conference/community. Event and content amplification. [VERIFY handle]"
+
+  # ── Our Account (monitor for replies/engagement) ────────────────────────────
+
+  - handle: "@plur_ai"
+    name: "PLUR.ai"
+    category: ecosystem
+    topics: ["AI memory", "engrams", "knowledge packs", "MCP"]
+    priority: high
+    notes: "OUR account. Monitor for engagement opportunities and replies."

@@ -1,0 +1,75 @@
+# Brand angles for Fair Data Society (@FairDataSociety)
+# TONE: Empowering, builder-focused, optimistic. Show what's POSSIBLE, not what's broken.
+# Customer is the HERO. FDS is the GUIDE.
+# Think: "you can build this" not "they're watching you"
+
+angles:
+  - id: build_your_own
+    trigger: "self-hosted project, homelab build, DIY infrastructure, personal cloud"
+    angle: "You built it. You own it. That's how data should work."
+    tone: "celebratory, impressed"
+    example: "Someone just built their own cloud storage on a Raspberry Pi. No subscription. No terms of service. No company scanning your files. This is what data sovereignty looks like in practice. Beautiful."
+    hashtags: ["#SelfHosted", "#DataSovereignty"]
+
+  - id: open_source_empowerment
+    trigger: "open source release, community contribution, public audit, code transparency"
+    angle: "Open source isn't a feature. It's a promise you can verify."
+    tone: "inviting, builder-to-builder"
+    example: "Every privacy claim should come with a link to the source code. Ours does. Not because we're noble — because that's the standard we all deserve. Fork it. Audit it. Improve it."
+    hashtags: ["#OpenSource", "#BuildInPublic"]
+
+  - id: agents_deserve_privacy
+    trigger: "AI agent news, agentic AI, MCP tools, agent infrastructure"
+    angle: "Your AI agent should work for you, not report on you."
+    tone: "forward-looking, practical"
+    example: "AI agents are handling your files, your research, your contracts. The question isn't whether they'll be useful — it's whether their infrastructure respects your data. We're building agent-native file sharing. Private by default."
+    hashtags: ["#AgenticAI", "#FairData"]
+
+  - id: data_ownership_wins
+    trigger: "data portability, switching services, export your data, interoperability"
+    angle: "Your data travels with you. Period."
+    tone: "matter-of-fact, empowering"
+    example: "Switched email providers and lost 10 years of contacts? That's not a migration problem — it's an ownership problem. When you truly own your data, switching is moving files, not begging for exports."
+    hashtags: ["#DataPortability", "#FairData"]
+
+  - id: privacy_by_architecture
+    trigger: "privacy feature announcement, encryption claim, privacy policy change"
+    angle: "Privacy isn't a setting. It's how the thing is built."
+    tone: "technical but accessible"
+    example: "Toggle switches for privacy are bandaids. Real privacy means the system physically can't see your data — not that it promises not to look. Architecture over policy."
+    hashtags: ["#PrivacyByDesign"]
+
+  - id: decentralization_empowerment
+    trigger: "service outage, platform shutdown, company pulls the plug, vendor dependency"
+    angle: "No single company should have an off switch for your files."
+    tone: "calm, principled"
+    example: "When a service goes down, your files shouldn't go with it. Decentralized storage means your data exists independently — no single point of failure, no kill switch, no permission needed."
+    hashtags: ["#Decentralization", "#Resilience"]
+
+  - id: fair_data_economy
+    trigger: "data economy, data as value, personal data worth, data marketplace"
+    angle: "Your data has value. You should be the one who benefits."
+    tone: "visionary, optimistic"
+    example: "The data economy is worth trillions. Almost none of that flows to the people who generate it. Fair data means you decide who accesses your data, under what terms, and you participate in the value it creates."
+    hashtags: ["#FairDataEconomy", "#DataRights"]
+
+  - id: community_building
+    trigger: "collaboration, community project, collective action, cooperative"
+    angle: "The best infrastructure is built by the people who use it."
+    tone: "warm, inclusive"
+    example: "We don't build for users. We build with them. Every contributor, every bug report, every fork makes the fair data stack stronger. This is infrastructure by the people, for the people."
+    hashtags: ["#Community", "#OpenSource"]
+
+  - id: honest_inbox
+    trigger: "whistleblower, anonymous reporting, source protection, journalist safety"
+    angle: "Sometimes the most important thing you can do is listen without knowing who's talking."
+    tone: "serious but hopeful"
+    example: "Fairdrop's Honest Inbox lets anyone send you files anonymously. Even we can't trace who sent it. Because some conversations need to happen without fear."
+    hashtags: ["#PressFreedom"]
+
+  - id: future_we_deserve
+    trigger: "tech optimism, positive vision, what could be, building better"
+    angle: "The future of data isn't surveillance. It's sovereignty."
+    tone: "visionary, inspiring"
+    example: "Imagine a world where your health records, your creative work, your conversations all belong to you — cryptographically, not contractually. We're not imagining it. We're building it."
+    hashtags: ["#FairData", "#BuildTheFuture"]

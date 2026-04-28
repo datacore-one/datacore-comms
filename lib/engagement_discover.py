@@ -664,7 +664,7 @@ EXA_QUERIES = [
     ("infrastructure", "self-hosted cloud alternative privacy site:x.com"),
 ]
 
-EXA_MAX_QUERIES = 6
+EXA_MAX_QUERIES = 2  # Reduced: Exa budget reserved for /today + /research first
 
 
 def _discover_via_exa(state: dict) -> List[dict]:
@@ -672,10 +672,25 @@ def _discover_via_exa(state: dict) -> List[dict]:
 
     Exa finds tweets via semantic similarity, complementing keyword-based
     X API search with meaning-based discovery.
+
+    Rate-limited: only runs if last Exa run was >3 hours ago to preserve
+    credits for /today and /research (which have priority).
     """
     api_key = os.environ.get("EXA_API_KEY")
     if not api_key:
         return []
+
+    # Rate limit: max 8 Exa runs/day for engagement (preserves ~900/mo for /today + /research)
+    last_exa = state.get("last_exa_run", "")
+    if last_exa:
+        try:
+            last_dt = datetime.fromisoformat(last_exa)
+            hours_since = (datetime.now(timezone.utc) - last_dt).total_seconds() / 3600
+            if hours_since < 3:
+                print(f"    Exa: skipping (last run {hours_since:.1f}h ago, rate limit 3h)")
+                return []
+        except Exception:
+            pass
 
     conversations = []
 
@@ -689,6 +704,9 @@ def _discover_via_exa(state: dict) -> List[dict]:
         except Exception as e:
             print(f"    Exa query {i} ({topic_group}) failed: {e}")
             continue
+
+    # Record this run
+    state["last_exa_run"] = datetime.now(timezone.utc).isoformat()
 
     return conversations
 

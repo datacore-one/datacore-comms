@@ -1,0 +1,75 @@
+# Brand angles for PLUR (@plur_ai)
+# TONE: Smart, curious, grounded in science. Connect AI memory to human cognition.
+# Mix: cognitive science fun facts + practical AI memory insights + builder culture
+# Two audiences: power users (Claude Code) + agent developers (SDK/API)
+
+angles:
+  - id: cognitive_science_parallel
+    trigger: "memory research, neuroscience finding, brain study, learning research"
+    angle: "Human brains and AI have the same memory problem. Brains solved it. AI hasn't — yet."
+    tone: "curious, educational"
+    example: "Your hippocampus replays today's experiences during sleep to consolidate long-term memory. Your AI? Wipes clean every session. PLUR's engram system is inspired by the same principle — replay, consolidate, persist."
+    audience: both
+
+  - id: spaced_repetition
+    trigger: "learning, study tips, Anki, flashcards, retention, forgetting curve"
+    angle: "Ebbinghaus proved we forget 70% within 24 hours. Your AI forgets 100% instantly."
+    tone: "playful, scientific"
+    example: "The forgetting curve is brutal for humans. It's total for AI. Every session starts at zero. PLUR applies the same insight as spaced repetition — surface the right memory at the right time."
+    audience: both
+
+  - id: correction_learning
+    trigger: "learning from mistakes, feedback, iteration, debugging mindset"
+    angle: "The most powerful learning happens when you're corrected — and remember it."
+    tone: "warm, relatable"
+    example: "You tell your AI 'use snake_case, not camelCase.' It listens. Next session? camelCase again. PLUR captures corrections as engrams. Tell it once, it remembers forever."
+    audience: power_users
+
+  - id: memory_consolidation
+    trigger: "sleep, rest, processing, unconscious learning"
+    angle: "Memory isn't just storage. It's consolidation — turning experiences into patterns."
+    tone: "thoughtful, scientific"
+    example: "During sleep, your brain doesn't just store memories — it reorganizes them, finds patterns, strengthens connections. PLUR does the same: raw corrections become reusable patterns over time."
+    audience: both
+
+  - id: context_is_everything
+    trigger: "AI fail, wrong output, hallucination, AI doing something stupid"
+    angle: "That's not an AI problem. That's a context problem."
+    tone: "direct, diagnostic"
+    example: "AI deleted a production database? Hallucinated an API that doesn't exist? 9 times out of 10, the AI had no memory of constraints it should have known. Context isn't optional — it's the safety rail."
+    audience: agent_developers
+
+  - id: file_over_database
+    trigger: "developer tooling, simplicity, portability, local-first"
+    angle: "The best developer tools are the ones you can read with cat."
+    tone: "builder-to-builder, opinionated"
+    example: "PLUR stores engrams in YAML. Not a vector database. Not a cloud service. A file on your machine that you can read, edit, version, and move. Complexity is not a feature."
+    audience: agent_developers
+
+  - id: collective_memory
+    trigger: "team knowledge, onboarding, institutional memory, knowledge sharing"
+    angle: "What if your whole team's AI remembered what everyone learned?"
+    tone: "visionary, practical"
+    example: "Senior dev discovers a production gotcha. Captures it as an engram. Now every AI agent on the team knows it — automatically. PLUR packs are npm for AI knowledge."
+    audience: agent_developers
+
+  - id: cheaper_with_memory
+    trigger: "AI costs, token usage, model pricing, efficiency"
+    angle: "The cheapest token is the one you don't need to send because your AI already knows."
+    tone: "practical, data-driven"
+    example: "Haiku + PLUR engrams outperforms Opus without memory on coding tasks. Not because Haiku is smarter — because it has context. Memory is a multiplier, not an add-on."
+    audience: both
+
+  - id: embodied_cognition
+    trigger: "robotics, physical AI, embodied intelligence, sensorimotor"
+    angle: "Intelligence without memory is reflex. Intelligence with memory is understanding."
+    tone: "philosophical, grounded"
+    example: "A newborn grabs everything. An adult reaches for what matters. The difference? Accumulated memory shaping attention. Same principle applies to AI agents."
+    audience: both
+
+  - id: neuroplasticity
+    trigger: "brain plasticity, adaptation, learning new skills, growth mindset"
+    angle: "Your brain rewires itself with every correction. Your AI should too."
+    tone: "inspiring, scientific"
+    example: "Neuroplasticity means your brain physically changes structure when you learn. PLUR brings the same idea to AI — each correction reshapes how your agent approaches problems. Persistent adaptation, not just pattern matching."
+    audience: both

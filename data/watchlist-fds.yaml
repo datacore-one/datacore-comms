@@ -1,0 +1,383 @@
+# Watchlist for Fair Data Society (@FairDataSociety)
+# Categories: thought_leader, ecosystem, competitor, journalist, organization, builder
+# Review: weekly refresh recommended
+#
+# Sources: tribe-profile.md target accounts, engagement_discover.py PRIORITY_TARGETS,
+#          FDS brandscript audience segments, Swarm/Ethereum ecosystem mapping.
+#
+# Handles marked [VERIFY] need manual confirmation on X.
+
+accounts:
+
+  # ── Privacy & Data Sovereignty Thought Leaders ──────────────────────────────
+
+  - handle: "@Snowden"
+    name: "Edward Snowden"
+    category: thought_leader
+    topics: ["privacy", "surveillance", "data sovereignty"]
+    priority: high
+    notes: "Most influential privacy voice globally. Posts about surveillance, encryption, digital rights."
+
+  - handle: "@ggreenwald"
+    name: "Glenn Greenwald"
+    category: journalist
+    topics: ["privacy", "surveillance", "press freedom"]
+    priority: medium
+    notes: "Journalist who broke NSA surveillance story. Privacy and press freedom advocate."
+
+  - handle: "@doctorow"
+    name: "Cory Doctorow"
+    category: thought_leader
+    topics: ["digital rights", "enshittification", "interoperability", "privacy"]
+    priority: high
+    notes: "EFF advisor, coined enshittification. Prolific on platform decay, data ownership, user rights."
+
+  - handle: "@schneierblog"
+    name: "Bruce Schneier"
+    category: thought_leader
+    topics: ["security", "privacy", "cryptography", "policy"]
+    priority: high
+    notes: "Security technologist and author. Crypto-Wars veteran. Publishes Schneier on Security."
+
+  - handle: "@evacide"
+    name: "Eva Galperin"
+    category: thought_leader
+    topics: ["privacy", "digital security", "stalkerware", "human rights"]
+    priority: high
+    notes: "EFF Director of Cybersecurity. Anti-stalkerware crusader. Practical privacy advocacy."
+
+  - handle: "@matthew_d_green"
+    name: "Matthew Green"
+    category: thought_leader
+    topics: ["cryptography", "privacy", "encryption policy"]
+    priority: high
+    notes: "Johns Hopkins cryptographer. Breaks down encryption debates accessibly."
+
+  - handle: "@maxschrems"
+    name: "Max Schrems"
+    category: thought_leader
+    topics: ["GDPR", "data transfers", "noyb", "privacy enforcement"]
+    priority: high
+    notes: "Founder of noyb.eu. Schrems I and II rulings changed global data transfer law. [VERIFY handle]"
+
+  - handle: "@johnnyryan"
+    name: "Johnny Ryan"
+    category: thought_leader
+    topics: ["GDPR", "adtech surveillance", "RTB", "privacy regulation"]
+    priority: high
+    notes: "ICCL Senior Fellow. Led landmark GDPR enforcement against real-time bidding. [VERIFY handle]"
+
+  - handle: "@VitalikButerin"
+    name: "Vitalik Buterin"
+    category: ecosystem
+    topics: ["ethereum", "privacy", "zk-proofs", "decentralization"]
+    priority: high
+    notes: "Ethereum co-founder. Increasingly vocal about privacy and ZK tech."
+
+  - handle: "@balajis"
+    name: "Balaji Srinivasan"
+    category: thought_leader
+    topics: ["network state", "data sovereignty", "crypto", "decentralization"]
+    priority: high
+    notes: "Former CTO Coinbase. Network state advocate. Data sovereignty aligns with FDS."
+
+  - handle: "@avilarenata"
+    name: "Renata Avila"
+    category: thought_leader
+    topics: ["digital rights", "data sovereignty", "global south", "policy"]
+    priority: high
+    notes: "Digital rights lawyer and data sovereignty advocate."
+
+  - handle: "@baconmeteor"
+    name: "Maciej Ceglowski"
+    category: thought_leader
+    topics: ["privacy", "data collection", "surveillance capitalism"]
+    priority: medium
+    notes: "Pinboard founder. Gave 'Haunted by Data' talk. Sharp critic of data hoarding. [VERIFY handle]"
+
+  # ── Privacy Organizations ───────────────────────────────────────────────────
+
+  - handle: "@EFF"
+    name: "Electronic Frontier Foundation"
+    category: organization
+    topics: ["digital rights", "privacy", "free speech", "encryption"]
+    priority: high
+    notes: "Flagship digital rights org. High-engagement account."
+
+  - handle: "@accessnow"
+    name: "Access Now"
+    category: organization
+    topics: ["digital rights", "privacy", "internet freedom", "RightsCon"]
+    priority: high
+    notes: "Global digital rights advocacy. RightsCon organizer."
+
+  - handle: "@epicprivacy"
+    name: "EPIC"
+    category: organization
+    topics: ["privacy", "regulation", "surveillance", "AI policy"]
+    priority: high
+    notes: "Electronic Privacy Information Center. US privacy policy leader."
+
+  - handle: "@torproject"
+    name: "Tor Project"
+    category: organization
+    topics: ["anonymity", "privacy", "censorship resistance", "metadata"]
+    priority: high
+    notes: "Anonymous browsing infrastructure. Aligned on metadata privacy."
+
+  - handle: "@mozilla"
+    name: "Mozilla Foundation"
+    category: organization
+    topics: ["open web", "privacy", "data rights", "AI transparency"]
+    priority: medium
+    notes: "Open web advocacy. Privacy-focused browser and policy work."
+
+  - handle: "@privacyint"
+    name: "Privacy International"
+    category: organization
+    topics: ["surveillance", "data exploitation", "privacy", "regulation"]
+    priority: high
+    notes: "UK-based global privacy advocacy. Investigates corporate and state surveillance."
+
+  - handle: "@bigbrotherwatch"
+    name: "Big Brother Watch"
+    category: organization
+    topics: ["surveillance", "facial recognition", "privacy", "UK policy"]
+    priority: high
+    notes: "UK civil liberties org. Campaigns against surveillance. Active X presence."
+
+  - handle: "@web3privacy"
+    name: "Web3Privacy Now"
+    category: organization
+    topics: ["web3 privacy", "privacy tools", "decentralization"]
+    priority: high
+    notes: "Privacy collective for Web3. Conference organizer. Key ally."
+
+  - handle: "@pressfreedom"
+    name: "Freedom of the Press Foundation"
+    category: organization
+    topics: ["press freedom", "SecureDrop", "whistleblowing", "source protection"]
+    priority: high
+    notes: "Built SecureDrop. Direct alignment with Fairdrop Honest Inbox."
+
+  - handle: "@RSF_inter"
+    name: "Reporters Without Borders"
+    category: organization
+    topics: ["press freedom", "journalist safety", "censorship"]
+    priority: medium
+    notes: "International press freedom org. Source protection use case. [VERIFY handle]"
+
+  - handle: "@noyb_eu"
+    name: "noyb"
+    category: organization
+    topics: ["GDPR enforcement", "data protection", "privacy rights"]
+    priority: medium
+    notes: "Max Schrems' org. Files GDPR complaints at scale. [VERIFY handle]"
+
+  - handle: "@EDRiorg"
+    name: "EDRi"
+    category: organization
+    topics: ["GDPR", "digital rights", "EU policy", "privacy regulation"]
+    priority: medium
+    notes: "European Digital Rights network. EU policy voice. [VERIFY handle]"
+
+  # ── Privacy-Focused Projects ────────────────────────────────────────────────
+
+  - handle: "@ProtonMail"
+    name: "Proton"
+    category: competitor
+    topics: ["encrypted email", "privacy", "VPN", "cloud storage"]
+    priority: high
+    notes: "Privacy email/VPN/drive. They do email+storage, we do decentralized file sharing."
+
+  - handle: "@signalapp"
+    name: "Signal"
+    category: competitor
+    topics: ["encrypted messaging", "privacy", "open source"]
+    priority: high
+    notes: "Gold standard private messaging. Philosophical ally."
+
+  - handle: "@TutaPrivacy"
+    name: "Tuta"
+    category: competitor
+    topics: ["encrypted email", "privacy", "open source", "quantum-safe"]
+    priority: high
+    notes: "Privacy email provider. Vocal on encryption policy. [VERIFY handle]"
+
+  - handle: "@GrapheneOS"
+    name: "GrapheneOS"
+    category: competitor
+    topics: ["mobile privacy", "android security", "open source"]
+    priority: medium
+    notes: "Privacy-focused mobile OS. Hardcore privacy community."
+
+  - handle: "@element_hq"
+    name: "Element (Matrix)"
+    category: competitor
+    topics: ["decentralized messaging", "encryption", "open source", "federation"]
+    priority: medium
+    notes: "Matrix protocol client. Decentralized encrypted communications."
+
+  - handle: "@brave"
+    name: "Brave Browser"
+    category: competitor
+    topics: ["privacy browser", "ad blocking", "web3"]
+    priority: medium
+    notes: "Privacy browser with built-in ad blocking. Large mainstream user base."
+
+  - handle: "@nymproject"
+    name: "Nym"
+    category: ecosystem
+    topics: ["mixnet", "metadata privacy", "network layer"]
+    priority: high
+    notes: "Mixnet for network-level privacy. Complementary -- they protect traffic, we protect files."
+
+  - handle: "@HOPRnet"
+    name: "HOPR"
+    category: ecosystem
+    topics: ["metadata privacy", "mixnet", "data privacy"]
+    priority: medium
+    notes: "Decentralized metadata privacy. Swiss-based. Ethereum ecosystem."
+
+  - handle: "@SecretNetwork"
+    name: "Secret Network"
+    category: ecosystem
+    topics: ["privacy smart contracts", "confidential computing", "web3"]
+    priority: medium
+    notes: "Privacy-preserving smart contracts. Web3 privacy ecosystem."
+
+  - handle: "@AztecNetwork"
+    name: "Aztec Network"
+    category: ecosystem
+    topics: ["zk-rollup", "private transactions", "ethereum privacy"]
+    priority: medium
+    notes: "ZK-rollup for private Ethereum transactions. Privacy infrastructure. [VERIFY handle]"
+
+  # ── Ethereum Swarm Ecosystem ────────────────────────────────────────────────
+
+  - handle: "@ethswarm"
+    name: "Ethereum Swarm"
+    category: ecosystem
+    topics: ["decentralized storage", "censorship resistance", "ethereum"]
+    priority: high
+    notes: "Fairdrop's storage backbone. Core ecosystem. Engage with all announcements."
+
+  - handle: "@FileverseHQ"
+    name: "Fileverse"
+    category: ecosystem
+    topics: ["decentralized documents", "web3 collaboration", "file sharing"]
+    priority: high
+    notes: "Web3 document collaboration. Integration partner mentioned in FDS brandscript."
+
+  - handle: "@logos_network"
+    name: "Logos"
+    category: ecosystem
+    topics: ["decentralized governance", "privacy infrastructure", "web3"]
+    priority: medium
+    notes: "Decentralized governance and infrastructure project."
+
+  # ── Decentralized Storage Projects ──────────────────────────────────────────
+
+  - handle: "@IPFS"
+    name: "IPFS"
+    category: ecosystem
+    topics: ["decentralized storage", "content addressing", "p2p"]
+    priority: medium
+    notes: "Content-addressed storage. Adjacent tech. Overlapping community."
+
+  - handle: "@Filecoin"
+    name: "Filecoin"
+    category: ecosystem
+    topics: ["decentralized storage", "incentivized storage", "web3"]
+    priority: medium
+    notes: "Incentivized storage network. Ecosystem ally for decentralized storage narrative."
+
+  - handle: "@ArweaveTeam"
+    name: "Arweave"
+    category: ecosystem
+    topics: ["permanent storage", "decentralization", "permaweb"]
+    priority: medium
+    notes: "Permanent storage network. Different model but overlapping community. [VERIFY -- may be @ArweaveEco or @onlyarweave]"
+
+  # ── Privacy Journalists ─────────────────────────────────────────────────────
+
+  - handle: "@kimzetter"
+    name: "Kim Zetter"
+    category: journalist
+    topics: ["cybersecurity", "surveillance", "privacy", "hacking"]
+    priority: medium
+    notes: "Award-winning cybersecurity journalist. Author of Countdown to Zero Day."
+
+  - handle: "@josephfcox"
+    name: "Joseph Cox"
+    category: journalist
+    topics: ["surveillance", "hacking", "data brokers", "privacy"]
+    priority: high
+    notes: "Journalist covering surveillance industry, data brokers. 404 Media co-founder."
+
+  - handle: "@lorenzofb"
+    name: "Lorenzo Franceschi-Bicchierai"
+    category: journalist
+    topics: ["cybersecurity", "hacking", "privacy", "surveillance"]
+    priority: medium
+    notes: "TechCrunch senior reporter on cybersecurity and privacy."
+
+  - handle: "@a_greenberg"
+    name: "Andy Greenberg"
+    category: journalist
+    topics: ["cybersecurity", "privacy", "cryptocurrency", "dark web"]
+    priority: medium
+    notes: "WIRED senior writer. Author of Tracers in the Dark and Sandworm."
+
+  - handle: "@samuelwoodhams"
+    name: "Samuel Woodhams"
+    category: journalist
+    topics: ["internet shutdowns", "digital rights", "surveillance"]
+    priority: low
+    notes: "Digital rights journalist at Top10VPN. Internet shutdown tracker. [VERIFY handle]"
+
+  # ── Web3 Privacy Builders ───────────────────────────────────────────────────
+
+  - handle: "@ArcticFoxie3"
+    name: "ArcticFoxie"
+    category: builder
+    topics: ["web3 privacy", "data sovereignty", "decentralization"]
+    priority: medium
+    notes: "Web3 privacy advocate. From tribe-profile targets. [VERIFY handle]"
+
+  - handle: "@vikiival"
+    name: "Viktor Valastin"
+    category: builder
+    topics: ["NFT", "decentralized storage", "Kodadot"]
+    priority: medium
+    notes: "Kodadot founder. NFT/storage intersection. From tribe-profile targets."
+
+  - handle: "@KaitoAI"
+    name: "Kaito AI"
+    category: ecosystem
+    topics: ["InfoFi", "crypto content scoring", "AI analytics"]
+    priority: medium
+    notes: "InfoFi scoring for crypto content. Tag in threads for amplification."
+
+  - handle: "@wesroth"
+    name: "Wes Roth"
+    category: thought_leader
+    topics: ["AI", "data sovereignty", "technology commentary"]
+    priority: medium
+    notes: "Tech commentator on AI and data sovereignty."
+
+  - handle: "@krassenstein"
+    name: "Krassenstein"
+    category: thought_leader
+    topics: ["technology", "politics", "privacy"]
+    priority: medium
+    notes: "High-engagement account. Broad tech/privacy topics."
+
+  # ── Our Accounts (monitor for replies/engagement) ───────────────────────────
+
+  - handle: "@FairDataSociety"
+    name: "Fair Data Society"
+    category: ecosystem
+    topics: ["data sovereignty", "fair data", "swarm", "digital rights"]
+    priority: high
+    notes: "OUR account. Monitor for engagement opportunities and replies."
