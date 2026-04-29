@@ -1,0 +1,28 @@
+# Content Engine Feedback
+# Add your reactions here. The morning prep reads this to adjust tone/topics.
+# Format: date, account, feedback type, note
+#
+# Types:
+#   good    — "more like this"
+#   bad     — "stop doing this"
+#   tone    — adjust voice/energy
+#   topic   — adjust topic mix
+#
+# The LLM reads this during content generation to calibrate.
+
+feedback:
+  # Example:
+  # - date: 2026-04-28
+  #   account: fds
+  #   type: tone
+  #   note: "Too dark/surveillance-focused. Be more empowering — show what people CAN build."
+
+  - date: 2026-04-28
+    account: fds
+    type: tone
+    note: "More empowering, builder-focused. Show what's possible, not what's broken."
+
+  - date: 2026-04-28
+    account: plur
+    type: topic
+    note: "Add cognitive science fun facts linked to AI memory. Spaced repetition, forgetting curves, neuroplasticity."

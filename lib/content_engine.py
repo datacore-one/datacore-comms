@@ -48,9 +48,9 @@ COMMS_DATA = MODULE_DIR / "data"
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-MAX_POSTS_PER_DAY = 15          # Total posts across all types
-MAX_POSTS_PER_CYCLE = 3         # Posts per distribution cycle
-CONTENT_QUEUE_SIZE = 20         # Max items in daily content queue
+MAX_POSTS_PER_DAY = 5           # Total posts across all types — quality over volume
+MAX_POSTS_PER_CYCLE = 1         # 1 post per hourly cycle — natural pacing
+CONTENT_QUEUE_SIZE = 10         # Smaller queue = higher quality bar
 WATCHLIST_CHECK_LIMIT = 10      # Recent tweets to check per watchlist account
 
 
@@ -188,9 +188,19 @@ def generate_content_queue(reddit_ideas: List[Dict], watchlist_ideas: List[Dict]
                 "Mix fun neuroscience facts with practical AI memory insights. Builder culture.",
     }.get(account, "")
 
+    # Load feedback
+    feedback_data = load_yaml(COMMS_DATA / "feedback.yaml")
+    feedback_items = [f for f in feedback_data.get("feedback", [])
+                      if f.get("account", "") in (account, "all")]
+    feedback_str = ""
+    if feedback_items:
+        feedback_str = "\n## Human feedback (IMPORTANT — follow these):\n"
+        for fb in feedback_items[-10:]:  # Last 10 feedback items
+            feedback_str += f"- [{fb.get('type', '?')}] {fb.get('note', '')}\n"
+
     prompt = f"""You are a social media strategist for the @{_account_handle(account)} X/Twitter account.
 {account_brief}
-
+{feedback_str}
 Generate today's content queue — a mix of posts ready to publish.
 
 ## Today's trending Reddit content:
@@ -273,9 +283,19 @@ def prep(account: str, dry_run: bool = False):
     items = generate_content_queue(reddit_ideas, watchlist_ideas, angles, account, dry_run)
     print(f"  Generated {len(items)} content items")
 
+    # Generate LinkedIn draft
+    print("  Generating LinkedIn draft...")
+    linkedin = generate_linkedin_draft(reddit_ideas, account)
+    if linkedin:
+        print(f"  LinkedIn draft: {linkedin['text'][:60]}...")
+    else:
+        print("  LinkedIn draft failed")
+
     if dry_run:
         for item in items:
             print(f"  [{item.get('type', '?')}] {item.get('text', '')[:80]}...")
+        if linkedin:
+            print(f"\n  [linkedin] {linkedin['text'][:120]}...")
         return items
 
     # Save queue
@@ -284,8 +304,10 @@ def prep(account: str, dry_run: bool = False):
     queue["prep_time"] = datetime.now(timezone.utc).isoformat()
     queue["reddit_count"] = len(reddit_ideas)
     queue["watchlist_count"] = len(watchlist_ideas)
+    if linkedin:
+        queue["linkedin_draft"] = linkedin
     save_content_queue(queue, account)
-    print(f"  Saved content queue ({len(items)} items)")
+    print(f"  Saved content queue ({len(items)} items + linkedin draft)")
 
     return items
 
@@ -301,7 +323,9 @@ def distribute(account: str, dry_run: bool = False):
     posted_today = len(queue.get("posted", []))
 
     if posted_today >= MAX_POSTS_PER_DAY:
-        print(f"  Daily limit reached ({posted_today}/{MAX_POSTS_PER_DAY})")
+        print(f"  Daily post limit reached ({posted_today}/{MAX_POSTS_PER_DAY}) — engagement only")
+        if not dry_run:
+            engage_with_watchlist(account)
         return
 
     # Get queued items, sorted by priority
@@ -392,31 +416,133 @@ def distribute(account: str, dry_run: bool = False):
                 print("  API credits depleted — stopping cycle")
                 break
 
+    # Phase 2b: Engagement actions (likes, follows on watchlist posts)
+    if not dry_run:
+        engage_with_watchlist(account)
+
     # Save updated queue
     save_content_queue(queue, account)
     print(f"  Cycle done: {posted_this_cycle} posted, {posted_today + posted_this_cycle}/{MAX_POSTS_PER_DAY} today")
 
 
-# ── Watchlist-driven amplification (distribution phase) ──────────────────────
+# ── Watchlist Engagement (likes, follows, quote RTs) ─────────────────────────
 
-def check_watchlist_and_amplify(account: str, dry_run: bool = False):
-    """Check watchlist for new posts worth amplifying.
+MAX_ENGAGEMENTS_PER_CYCLE = 5   # Likes/follows per distribution cycle
+MAX_ENGAGEMENTS_PER_DAY = 30    # Daily engagement cap
 
-    This runs during distribution. Does 1 X API read (list timeline)
-    to check for recent posts from high-priority watchlist accounts.
+def engage_with_watchlist(account: str):
+    """Like and follow watchlist accounts' recent posts.
+
+    This is the high-ROI engagement: liking posts from people in your orbit
+    makes you visible in their notifications without spending write credits
+    on original posts. 1 X API read + up to 5 likes per cycle.
     """
     watchlist = load_watchlist(account)
-    high_priority = [w for w in watchlist if w.get("priority") == "high"]
-
-    if not high_priority:
+    if not watchlist:
         return
 
-    # Check for recent tweets from watchlist via X API search
-    # Use user mentions or from: queries (1 API read for batch)
-    handles = [w["handle"].lstrip("@") for w in high_priority[:5]]
+    # Load engagement state to track daily count and seen tweets
+    engage_state_file = STATE_DIR / f"engage-state-{account}.json"
+    engage_state = {}
+    if engage_state_file.exists():
+        try:
+            engage_state = json.loads(engage_state_file.read_text())
+        except Exception:
+            pass
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if engage_state.get("date") != today:
+        engage_state = {"date": today, "liked": [], "followed": [], "count": 0}
+
+    if engage_state["count"] >= MAX_ENGAGEMENTS_PER_DAY:
+        return
+
+    # Pick high/medium priority accounts to check
+    targets = [w for w in watchlist if w.get("priority") in ("high", "medium")]
+    if not targets:
+        targets = watchlist[:10]
+
+    # Rotate which accounts we check each cycle (don't always check the same ones)
+    rotation = engage_state.get("rotation", 0)
+    if rotation >= len(targets):
+        rotation = 0
+    batch = targets[rotation:rotation + 5]
+    if not batch:
+        batch = targets[:5]
+        rotation = 0
+    engage_state["rotation"] = (rotation + 5) % max(len(targets), 1)
+
+    # Build search query: from:handle1 OR from:handle2 (1 API read)
+    handles = [w["handle"].lstrip("@") for w in batch]
+    print(f"  Engagement: checking {len(handles)} accounts: {', '.join(handles)}")
     query = " OR ".join(f"from:{h}" for h in handles)
 
-    # X API v2 recent search
+    try:
+        from x_poster import XPoster
+        poster = XPoster(account=account)
+
+        # Get our user_id (needed for like/follow endpoints)
+        if not poster.user_id:
+            me = poster._oauth_get("https://api.x.com/2/users/me")
+            poster.user_id = me["data"]["id"]
+
+        # Search for recent tweets from watchlist accounts
+        import urllib.parse as up
+        search_url = (
+            "https://api.x.com/2/tweets/search/recent?"
+            + up.urlencode({
+                "query": query,
+                "max_results": 10,
+                "tweet.fields": "public_metrics,author_id,created_at",
+            })
+        )
+        result = poster._oauth_get(search_url)
+        tweets = result.get("data", [])
+
+        if not tweets:
+            print(f"  Engagement: no recent tweets from watchlist batch")
+            return
+
+        liked_this_cycle = 0
+        for tweet in tweets:
+            if liked_this_cycle >= MAX_ENGAGEMENTS_PER_CYCLE:
+                break
+            if engage_state["count"] >= MAX_ENGAGEMENTS_PER_DAY:
+                break
+
+            tweet_id = tweet["id"]
+            if tweet_id in engage_state["liked"]:
+                continue
+
+            try:
+                poster.like(tweet_id)
+                engage_state["liked"].append(tweet_id)
+                engage_state["count"] += 1
+                liked_this_cycle += 1
+                text_preview = tweet.get("text", "")[:50]
+                print(f"    Liked: {text_preview}...")
+                time.sleep(1)
+            except Exception as e:
+                if "402" in str(e) or "403" in str(e):
+                    print(f"  Engagement: API credits depleted")
+                    break
+                # Already liked or other error — skip
+                continue
+
+        print(f"  Engagement: {liked_this_cycle} likes this cycle, {engage_state['count']}/{MAX_ENGAGEMENTS_PER_DAY} today")
+
+    except Exception as e:
+        print(f"  Engagement error: {e}")
+
+    # Save engagement state
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with open(engage_state_file, "w") as f:
+        json.dump(engage_state, f, indent=2)
+
+
+def check_watchlist_and_amplify(account: str, dry_run: bool = False):
+    """Legacy — engagement now handled by engage_with_watchlist in distribute phase."""
+    pass
     api_key = os.environ.get("FDS_X_API_KEY" if account == "fds" else "PLUR_X_API_KEY")
     api_secret = os.environ.get("FDS_X_API_SECRET" if account == "fds" else "PLUR_X_API_SECRET")
 
@@ -561,18 +687,7 @@ def show_status(account: str):
 def _call_llm(prompt: str) -> Optional[str]:
     """Call LLM for content generation. OpenRouter primary, Anthropic fallback."""
     # Primary: OpenRouter (pay-per-use, topped up)
-    or_key = os.environ.get("OPENROUTER_API_KEY")
-    if not or_key:
-        for env_name in ["mrdata.env", "local.env", ".env"]:
-            ef = DATA_DIR / ".datacore" / "env" / env_name
-            if ef.exists():
-                for line in ef.read_text().splitlines():
-                    if line.startswith("OPENROUTER_API_KEY="):
-                        or_key = line.split("=", 1)[1].strip()
-                        break
-            if or_key:
-                break
-
+    or_key = _get_openrouter_key()
     if or_key:
         try:
             req = urllib.request.Request(
@@ -590,22 +705,9 @@ def _call_llm(prompt: str) -> Optional[str]:
         except Exception as e:
             print(f"  OpenRouter failed: {e}")
 
-    # Fallback: Anthropic API (if credits available)
-    api_key = _get_anthropic_key()
-    if api_key:
-        try:
-            import anthropic
-            client = anthropic.Anthropic(api_key=api_key)
-            response = client.messages.create(
-                model="claude-sonnet-4-6-20250514",
-                max_tokens=4000,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text
-        except Exception as e:
-            print(f"  Anthropic API failed: {e}")
-
-    # Last fallback: Claude CLI
+    # Fallback: Claude CLI (uses your interactive auth — no API billing)
+    # Note: direct Anthropic API path removed by policy — content generation
+    # routes through OpenRouter to avoid burning Anthropic credits.
     import subprocess
     try:
         result = subprocess.run(
@@ -620,24 +722,23 @@ def _call_llm(prompt: str) -> Optional[str]:
     return None
 
 
-def _get_anthropic_key() -> Optional[str]:
-    """Get Anthropic API key from env files."""
-    key = os.environ.get("ANTHROPIC_API_KEY")
+def _get_openrouter_key() -> Optional[str]:
+    """Get OpenRouter API key from env vars or env files.
+
+    Search order: env var → openrouter.env → mrdata.env → local.env → .env.
+    """
+    key = os.environ.get("OPENROUTER_API_KEY")
     if key:
         return key
 
     env_dir = DATA_DIR / ".datacore" / "env"
-    search_files = [
-        env_dir / "mrdata.env",
-        env_dir / "local.env",
-        env_dir / ".env",
-        Path.home() / "config" / "nightshift.env",
-    ]
-    for env_file in search_files:
-        if env_file.exists():
-            for line in env_file.read_text().splitlines():
-                if line.startswith("ANTHROPIC_API_KEY="):
-                    return line.split("=", 1)[1].strip()
+    for env_name in ["openrouter.env", "mrdata.env", "local.env", ".env"]:
+        ef = env_dir / env_name
+        if not ef.exists():
+            continue
+        for line in ef.read_text().splitlines():
+            if line.startswith("OPENROUTER_API_KEY="):
+                return line.split("=", 1)[1].strip()
     return None
 
 
@@ -651,11 +752,198 @@ def _account_handle(account: str) -> str:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+def daily_digest(account: str) -> str:
+    """Generate a daily digest of what was posted + metrics for /today briefing."""
+    try:
+        from x_poster import XPoster
+
+        poster = XPoster(account=account)
+        me = poster._oauth_get("https://api.x.com/2/users/me?user.fields=public_metrics")
+        user_id = me["data"]["id"]
+        username = me["data"]["username"]
+        followers = me["data"]["public_metrics"]["followers_count"]
+
+        tweets = poster._oauth_get(
+            "https://api.x.com/2/users/" + user_id + "/tweets?max_results=10"
+            "&tweet.fields=public_metrics,created_at,attachments"
+        )
+
+        lines = [f"@{username} ({followers} followers)"]
+        total_views = 0
+        total_likes = 0
+        total_rts = 0
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        for t in tweets.get("data", []):
+            day = t["created_at"][:10]
+            if day not in (today, yesterday):
+                continue
+            m = t.get("public_metrics", {})
+            v = m.get("impression_count", 0)
+            l = m.get("like_count", 0)
+            r = m.get("retweet_count", 0)
+            total_views += v
+            total_likes += l
+            total_rts += r
+            img = " [IMG]" if "attachments" in t else ""
+            lines.append(f"  {v} views, {l} likes{img} — {t['text'][:60]}...")
+
+        lines.append(f"  Totals: {total_views} views, {total_likes} likes, {total_rts} RTs")
+
+        # Load engagement stats
+        engage_file = STATE_DIR / f"engage-state-{account}.json"
+        if engage_file.exists():
+            es = json.loads(engage_file.read_text())
+            lines.append(f"  Engagement: {es.get('count', 0)} likes given today")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"@{_account_handle(account)}: metrics unavailable ({e})"
+
+
+def digest_all() -> str:
+    """Generate digest for all accounts, including LinkedIn drafts."""
+    parts = []
+    for account in ["fds", "plur"]:
+        parts.append(daily_digest(account))
+
+    # Show LinkedIn drafts if available
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for account in ["fds", "plur"]:
+        queue_file = STATE_DIR / f"content-queue-{account}-{today}.json"
+        if queue_file.exists():
+            queue = json.loads(queue_file.read_text())
+            linkedin = queue.get("linkedin_draft")
+            if linkedin and linkedin.get("status") == "draft":
+                parts.append(f"LinkedIn draft ({account}):\n  {linkedin['text'][:150]}...\n  [Full draft in content queue — post manually]")
+
+    return "\n\n".join(parts)
+
+
+def generate_linkedin_draft(reddit_ideas: List[Dict], account: str) -> Optional[Dict]:
+    """Generate a single LinkedIn 'building in public' draft for the day.
+
+    Format: personal voice, longer form, professional but authentic.
+    Returns a dict with text + topic or None if LLM fails.
+    """
+    reddit_summary = "\n".join(
+        f"- [r/{i['subreddit']}] {i['title']}"
+        for i in reddit_ideas[:10]
+    )
+
+    account_context = {
+        "fds": "You're Gregor, building Fair Data Society — making data sovereignty real "
+               "through open source tools (Fairdrop, Fairdrive). You believe people should "
+               "own their data. You're building an AI-first organization where AI agents run "
+               "operations autonomously.",
+        "plur": "You're Gregor, building PLUR.ai — persistent memory for AI coding agents. "
+                "Solo founder. You extracted the memory engine from your personal AI system "
+                "(Datacore) and turned it into a product. You use 7+ AI agents daily in your workflow.",
+    }.get(account, "")
+
+    prompt = f"""You are ghostwriting a LinkedIn post for a founder building in public.
+
+{account_context}
+
+Today's trending topics from Reddit and tech:
+{reddit_summary}
+
+Write ONE LinkedIn post (200-400 words). Rules:
+- Personal voice. First person. Authentic, not polished.
+- "Building in public" style — show the work, the decisions, the numbers.
+- Strong opening line (LinkedIn shows first 2 lines as hook before "...see more").
+- Short paragraphs. One idea per paragraph. Mix 1-sentence and 2-3 sentence paragraphs.
+- Include specific numbers, decisions, or lessons where possible.
+- End with a question that invites comments.
+- Add 2-3 relevant hashtags at the end.
+- Pick a topic that connects your current work to something trending.
+- NO AI jargon dump. Write like you're talking to a smart friend over coffee.
+
+Output ONLY the post text. No JSON, no metadata, no explanation.
+"""
+
+    content = _call_llm(prompt)
+    if not content:
+        return None
+
+    # Clean up any markdown or extra formatting
+    text = content.strip()
+    if text.startswith('"') and text.endswith('"'):
+        text = text[1:-1]
+
+    return {
+        "platform": "linkedin",
+        "account": account,
+        "text": text,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "status": "draft",
+    }
+
+
+def generate_session_posts(session_summary: str, accomplishments: str = "") -> Optional[Dict]:
+    """Generate social media post suggestions based on a work session.
+
+    Called by /wrap-up at end of session. Returns drafts for:
+    - Personal X post (building in public)
+    - Project X post (per relevant project account)
+    - LinkedIn post (professional, longer)
+    """
+    prompt = f"""A developer just finished a work session. Generate 3 social media post drafts from this session.
+
+Session summary:
+{session_summary}
+
+Accomplishments:
+{accomplishments}
+
+Generate exactly 3 posts as a JSON array:
+
+1. Personal X post (@greaborisa) — "building in public" style, casual, what you worked on today.
+   Max 280 chars. Authentic, specific. Not a press release.
+
+2. Project X post — pick the most relevant project account (@FairDataSociety or @plur_ai).
+   Max 280 chars. Focus on what shipped or what's interesting to that community.
+
+3. LinkedIn post — 150-300 words. Professional but authentic. "Building in public" style.
+   Strong hook line. Short paragraphs. End with a question. 2-3 hashtags.
+
+Format as JSON array:
+[
+  {{"platform": "x", "account": "personal", "text": "..."}},
+  {{"platform": "x", "account": "fds_or_plur", "text": "..."}},
+  {{"platform": "linkedin", "account": "personal", "text": "..."}}
+]
+
+Output ONLY the JSON array.
+"""
+
+    content = _call_llm(prompt)
+    if not content:
+        return None
+
+    try:
+        start = content.find("[")
+        end = content.rfind("]") + 1
+        if start >= 0 and end > start:
+            posts = json.loads(content[start:end])
+            for p in posts:
+                p["generated_at"] = datetime.now(timezone.utc).isoformat()
+                p["status"] = "draft"
+            return posts
+    except json.JSONDecodeError:
+        pass
+
+    return None
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Content-First Engagement Engine")
-    parser.add_argument("command", choices=["prep", "distribute", "status"],
+    parser.add_argument("command", choices=["prep", "distribute", "status", "digest", "session-posts"],
                         help="Command to run")
+    parser.add_argument("summary", nargs="?", default=None,
+                        help="Session summary (session-posts only; falls back to stdin if omitted)")
     parser.add_argument("--account", default="fds", choices=["fds", "plur"],
                         help="Account to run for")
     parser.add_argument("--dry-run", action="store_true",
@@ -668,6 +956,22 @@ def main():
         distribute(args.account, dry_run=args.dry_run)
     elif args.command == "status":
         show_status(args.account)
+    elif args.command == "digest":
+        print(digest_all())
+    elif args.command == "session-posts":
+        # Source order: positional arg → stdin → empty
+        if args.summary:
+            summary = args.summary
+        elif not sys.stdin.isatty():
+            summary = sys.stdin.read()
+        else:
+            print("session-posts requires a summary (positional arg or stdin)", file=sys.stderr)
+            sys.exit(2)
+        posts = generate_session_posts(summary)
+        if posts:
+            print(json.dumps(posts, indent=2))
+        else:
+            print("Failed to generate session posts")
 
 
 if __name__ == "__main__":
