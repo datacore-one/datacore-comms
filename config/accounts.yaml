@@ -1,0 +1,47 @@
+# Comms-active accounts — config for the desktop app's Comms Pulse panel.
+#
+# Each entry binds an X account to a Datacore venture/space + the comms
+# artifact directory that the heartbeat CMO writes retros to. The Comms
+# Pulse panel reads from this list to know which accounts to surface,
+# where to look for retros / engagement checks / content calendars, and
+# which Late API account_id to query for live posts.
+#
+# Per ENG-2026-0420-011: never mix account state across accounts. Each
+# entry is independent; quota / rate limits / pause-state are scoped per
+# account_id.
+
+schema_version: "1.0"
+
+accounts:
+  - account_id: fairdatasociety
+    handle: "@FairDataSociety"
+    display_name: Fair Data Society
+    venture_id: 3-fds
+    venture_name: FDS
+    # Where the heartbeat CMO writes artifacts. Resolved relative to
+    # the bound venture's space path.
+    artifacts_dir: 1-tracks/comms
+    # Late API account_id (set by the Late API setup script). Used by
+    # the daemon to fetch recent posts and engagement metrics.
+    late_account_id: 6978cf6d77637c5c857c867d
+    # GitHub orgs whose repo activity feeds the metrics_wow block.
+    repos:
+      - fairDataSociety/fairdrop-android
+      - fairDataSociety/agent-data-exchange
+      - fairDataSociety/fds-id
+
+  - account_id: plur_ai
+    handle: "@plur_ai"
+    display_name: PLUR
+    venture_id: 5-plur
+    venture_name: PLUR
+    artifacts_dir: 1-tracks/comms
+    # late_account_id: TBD — leave null until set up
+    late_account_id: null
+    repos:
+      - plur-ai/cli
+      - plur-ai/mcp
+      - plur-ai/plur
+
+  # Add new accounts here. The Comms Pulse panel auto-discovers them
+  # on next mount; no app rebuild required.
