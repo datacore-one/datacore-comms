@@ -1,3 +1,14 @@
+---
+name: approve-content
+description: approve-content command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:approve-content
+  tags:
+    - approve-content
+---
+
 # Approve Content - Content Review Queue
 
 ## Command Context

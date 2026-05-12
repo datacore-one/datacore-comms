@@ -1,3 +1,14 @@
+---
+name: monthly-plan
+description: monthly-plan command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:monthly-plan
+  tags:
+    - monthly-plan
+---
+
 # Monthly Plan - Content Calendar Generation
 
 ## Command Context

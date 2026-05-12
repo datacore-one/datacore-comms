@@ -200,3 +200,10 @@ context:
 engrams:
   namespace: comms
   scopes: [comms]
+
+recall:
+  # DIP-0029 — module-level engram scope; composes with command-level recall:.
+  scopes:
+    - module:comms
+  tags:
+    - comms

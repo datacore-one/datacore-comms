@@ -1,3 +1,14 @@
+---
+name: engage
+description: engage command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:engage
+  tags:
+    - engage
+---
+
 # /engage — X Feed Engagement Agent
 
 Launch the Chrome-based X feed engagement agent. Likes, follows, drafts replies,

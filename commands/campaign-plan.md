@@ -1,3 +1,14 @@
+---
+name: campaign-plan
+description: campaign-plan command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:campaign-plan
+  tags:
+    - campaign-plan
+---
+
 # Campaign Plan - Quarterly Strategy Creation
 
 ## Command Context

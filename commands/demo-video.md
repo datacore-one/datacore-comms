@@ -1,3 +1,14 @@
+---
+name: demo-video
+description: demo-video command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:demo-video
+  tags:
+    - demo-video
+---
+
 # Demo Video Pipeline — Screen Recording to X Post
 
 Repeatable process for creating polished demo videos with styled captions

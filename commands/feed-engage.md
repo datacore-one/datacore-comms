@@ -1,3 +1,14 @@
+---
+name: feed-engage
+description: feed-engage command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:feed-engage
+  tags:
+    - feed-engage
+---
+
 # Feed Engagement — Chrome-Based Organic Activity
 
 Run as a background agent on the local machine. Uses Chrome browser automation to

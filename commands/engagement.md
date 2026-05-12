@@ -1,3 +1,14 @@
+---
+name: engagement
+description: engagement command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:engagement
+  tags:
+    - engagement
+---
+
 # Engagement - X Conversation Engagement Pipeline
 
 ## Command Context

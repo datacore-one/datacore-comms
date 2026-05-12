@@ -1,3 +1,14 @@
+---
+name: comms-status
+description: comms-status command
+recall:
+  # DIP-0029 default — engrams scoped to this command + tag-matched.
+  scopes:
+    - command:comms-status
+  tags:
+    - comms-status
+---
+
 # Comms Status - Communications Dashboard
 
 ## Command Context
