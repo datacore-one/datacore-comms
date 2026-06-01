@@ -222,6 +222,13 @@ class FollowListBuilder:
 
 if __name__ == "__main__":
     import sys
+    # DISABLED 2026-06-01 — follow_list_builder feeds FollowManager.execute_daily_follows,
+    # the automated follow path. Disabling here breaks the standalone invocation; the
+    # class itself stays importable (in case any helper is salvaged later).
+    # To re-enable: remove the sys.exit below.
+    # See: 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md
+    sys.exit("DISABLED 2026-06-01 — feeds automated-follow pipeline. See comms-redesign-research-2026-05-30.md")
+
     sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
     from env_utils import load_env_files
 

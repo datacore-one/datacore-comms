@@ -167,6 +167,14 @@ def post_reply(tweet_url: str, reply_text: str, timeout_ms: int = 30000) -> str:
 
 
 if __name__ == "__main__":
+    # DISABLED 2026-06-01 — chrome_poster uses Playwright to drive x.com directly.
+    # Browser scripting of X (non-API automation) is explicit permanent-suspension
+    # grounds per X Automation Rules. This is the EXACT mechanism that suspended
+    # @FairDataSociety on 2026-05-20.
+    # To re-enable: nothing legitimate. Use OAuth API or manual web posting.
+    # See: 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md
+    sys.exit("DISABLED 2026-06-01 — Chrome scripting of x.com = permanent suspension grounds. See comms-redesign-research-2026-05-30.md")
+
     if "--setup" in sys.argv:
         setup_auth()
     elif "--reply" in sys.argv:

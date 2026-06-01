@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
-"""Runner: daily follow execution. Called by systemd timer."""
-import os
+"""Runner: daily follow execution. Called by systemd timer.
+
+DISABLED 2026-06-01 — automated follow violates X Authenticity policy
+(indiscriminate following → permanent suspension). Triggered the FDS
+account suspension on 2026-05-20.
+
+To re-enable: remove the sys.exit() block below. Don't. Use draft-only
+patterns instead. See 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md.
+"""
 import sys
+sys.exit("DISABLED 2026-06-01 — automated follow violates X policy. See comms-redesign-research-2026-05-30.md")
+
+import os
 from pathlib import Path
 
 LIB_DIR = Path(__file__).parent

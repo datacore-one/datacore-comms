@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """Runner: newsfeed monitor. Called by systemd timer.
 
-Fetches home timeline via X API v2 and processes through NewsfeedMonitor.
+DISABLED 2026-06-01 — NewsfeedMonitor auto-likes scored tweets, which
+violates X Authenticity policy (engagement spam → permanent suspension).
+This is the auto-like path that contributed to FDS suspension 2026-05-20.
+
+To re-enable: remove the sys.exit() block below.
+See 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md.
 """
+import sys
+sys.exit("DISABLED 2026-06-01 — auto-likes via newsfeed_monitor violate X policy. See comms-redesign-research-2026-05-30.md")
+
 import json
 import os
-import sys
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError

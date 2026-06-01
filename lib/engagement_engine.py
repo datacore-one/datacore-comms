@@ -635,6 +635,15 @@ def run(dry_run: bool = False, autonomous: bool = False, no_escalate: bool = Fal
 
 
 if __name__ == "__main__":
+    # DISABLED 2026-06-01 — engagement_engine auto-replies to scored conversations,
+    # which is keyword-triggered automation (X anti-spam, Feb 2026) and was part of
+    # the FDS suspension on 2026-05-20. The module still exports helpers used by
+    # other modules (scoring, classification) — those imports are fine; what's
+    # disabled is direct invocation.
+    # To re-enable: remove the sys.exit below. Don't — use draft-only patterns.
+    # See: 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md
+    sys.exit("DISABLED 2026-06-01 — auto-reply violates X policy. See comms-redesign-research-2026-05-30.md")
+
     dry_run = "--dry-run" in sys.argv
     autonomous = "--autonomous" in sys.argv
     no_escalate = "--no-escalate" in sys.argv
