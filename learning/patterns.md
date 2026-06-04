@@ -269,10 +269,93 @@ When positioning privacy products, lead with:
 
 ---
 
+---
+
+## Session: X Compliance Architecture (2026-06-04)
+
+### Pattern: X Portfolio Enforcement Cascade
+
+**Context**: @FDS account was suspended during session. @plur_ai subsequently received a "verify yourself" lock even though it had not been involved in any violation.
+
+**Pattern**: X enforcement can propagate across accounts that share ownership signals (email, phone, IP, payment method). When one account in a portfolio faces enforcement, check all sibling accounts immediately.
+
+**Action**: After any X suspension or lock — log into each portfolio account via web, check for pending verification challenges, and resolve before automation resumes.
+
+**Tags**: #x #enforcement #portfolio #suspension #cascade #compliance
+
+---
+
+### Pattern: X 403 "Temporarily Locked" — Try Web First
+
+**Context**: API 403 errors with "temporarily locked" messaging appeared after @FDS suspension. Initial read was "permanent enforcement".
+
+**Pattern**: A 403 "temporarily locked" via the API is not necessarily permanent. X uses this code for verify-yourself challenges that are clearable via a web browser login. Web login presents the challenge; completing it restores API access.
+
+**Rule**: Before concluding an account is permanently locked: log in via web browser, check for and complete any challenge, then retry API calls.
+
+**Tags**: #x #403 #locked #verify #web-login #api #enforcement
+
+---
+
+### Pattern: Compliant AI-Assisted Social Posting Architecture (Pattern B+D)
+
+**Context**: Research into compliant X automation frameworks (2026-06-04 deep research session) converged on a single industry pattern.
+
+**Pattern**: The strongest ToS-compliant AI posting architecture physically separates agent capability from the publish action:
+
+```
+Agent pipeline:
+  draft-writer → filesystem drafts
+  (agent stops here — cannot post)
+
+Human pipeline:
+  human reviews drafts → approves → runs posting CLI
+  (CLI is human-only — not callable by agent)
+```
+
+This is "Pattern B+D": filesystem drafts + human-only posting CLI.
+
+**The draft→review→publish boundary**: Draft and Approved states are agent-writable. Publish is a human gate. The publish CLI should require explicit human invocation — not a scheduled job, not an API endpoint the agent can hit.
+
+**Why this matters**: X ToS prohibits automated posting that bypasses human review for promotional/engagement content. Pattern B+D provides a defensible audit trail: every post has a human approval event before publication.
+
+**Tags**: #x #compliance #architecture #draft #review #publish #human-gate #pattern-bd
+
+---
+
+### Pattern: OSS Tool README Reliability — Verify Before Trusting
+
+**Context**: Research session evaluated several open-source X/social automation tools claiming ToS compliance.
+
+**Finding**: README highlights routinely overstate implementation maturity:
+- **noslop**: Claimed agent-safe posting; actual repo was stale, agent could still invoke post endpoint directly
+- **agent-content-pipeline**: Claimed X auth support; implementation used browser cookie extraction (banned by X ToS)
+
+**Rule**: Before adopting any OSS tool for X automation:
+1. Check last commit date — stale = unmaintained = claims may not reflect code
+2. Read the actual auth implementation, not just the README auth section
+3. Verify the human-gate is structural (agent literally cannot invoke it), not just documented
+
+**Tags**: #oss #readme #trust #x #auth #compliance #due-diligence
+
+---
+
+### Pattern: Retiring Engagement Scripts as Valid Strategic Choice
+
+**Context**: User authorized retiring all automated engagement scripts (likes, follows, replies) during the X compliance review session.
+
+**Pattern**: Engagement automation that was built for growth is a liability during enforcement scrutiny. When accounts are under review, retiring engagement scripts entirely is preferable to auditing them under time pressure.
+
+**User preference**: "Engagement scripts need to be retired for now anyway." Reddit scanning code was preserved as a useful primitive shape (value: audience research, not engagement automation).
+
+**Tags**: #x #engagement #automation #compliance #retire #strategic
+
+---
+
 ## Corrections Log
 
 *No corrections logged yet. Add human feedback here.*
 
 ---
 
-*Last updated: 2026-01-11*
+*Last updated: 2026-06-04*
