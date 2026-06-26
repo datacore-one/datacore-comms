@@ -899,7 +899,7 @@ Accomplishments:
 
 Generate exactly 3 posts as a JSON array:
 
-1. Personal X post (@greaborisa) — "building in public" style, casual, what you worked on today.
+1. Personal X post (@jssr) — "building in public" style, casual, what you worked on today.
    Max 280 chars. Authentic, specific. Not a press release.
 
 2. Project X post — pick the most relevant project account (@FairDataSociety or @plur_ai).
