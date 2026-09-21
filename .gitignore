@@ -1,0 +1,15 @@
+# Layered context (DIP-0002)
+CLAUDE.md
+*.space.md
+*.org.md
+*.local.md
+*.local.yaml
+
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+.env
+
+# Private module data — belongs in the space that uses the module, never in code
+data/
