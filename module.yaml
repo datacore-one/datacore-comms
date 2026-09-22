@@ -60,8 +60,6 @@ provides:
     - name: brand-positioning
       description: Create BrandScript, Tribe Profile, voice guidelines
     # Content
-    - name: content-calendar
-      description: Create monthly content calendar with post assignments
     - name: approve-content
       description: Review and approve pending content drafts
     # Scheduling
@@ -76,14 +74,8 @@ provides:
     - name: demo-video
       description: Demo video pipeline — screen recording to styled captions to X post via ffmpeg + Late.dev
     # Landing
-    - name: landing
-      description: Create or update landing pages for campaigns
     # Ads
-    - name: ads
-      description: Manage X Ads campaigns and review performance
     # Analytics
-    - name: analytics
-      description: Pull PostHog metrics and generate campaign reports
 
   agents:
     # Router
