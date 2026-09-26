@@ -10,6 +10,33 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 
+# Claims of a pilot or deployment with an institution (MEM-18). No record of
+# executed pilots exists in the system, so none of these can be verified by a
+# machine: every one is stopped for a human, whatever the voice file says.
+CLAIM_PATTERNS = [
+    re.compile(r"\b(?:live|active|running|ongoing|successful|paid)\s+pilots?\b", re.I),
+    re.compile(r"\bpilots?\s+(?:programme\s+|program\s+|project\s+)?(?:with|at|in)\s+(?:the\s+)?[A-Z]"),
+    re.compile(r"\b(?:now\s+)?(?:deployed|live|rolled\s+out|running)\s+(?:at|in|with|across)\s+(?:the\s+)?[A-Z]"),
+    re.compile(r"\bin\s+production\s+(?:with|at|in)\b", re.I),
+    re.compile(r"\b(?:deployment|rollout)\s+(?:with|at)\s+(?:the\s+)?[A-Z]"),
+]
+
+
+def claim_violations(text: str) -> List[str]:
+    """Unverifiable pilot/deployment claims in ``text`` (MEM-18)."""
+    out = []
+    for rx in CLAIM_PATTERNS:
+        m = rx.search(text)
+        if m:
+            out.append(f"Unverified pilot/deployment claim: '{m.group(0)}' -- "
+                       "a human must confirm it happened before this is published")
+    return out
+
+
+class ClaimNotVerified(ValueError):
+    """Raised by a publisher when text claims a pilot or deployment (MEM-18)."""
+
+
 @dataclass
 class GuardrailResult:
     passed: bool
@@ -70,6 +97,9 @@ class ContentGuardrails:
         # Emoji
         if not self.allow_emoji and self._has_emoji(text):
             violations.append("Emoji not allowed")
+
+        # Pilot / deployment claims -- built in, not configurable per voice
+        violations.extend(claim_violations(text))
 
         return GuardrailResult(
             passed=len(violations) == 0,

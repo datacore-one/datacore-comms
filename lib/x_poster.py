@@ -109,6 +109,19 @@ class XPoster:
 
     # --- Public API ---
 
+    def _refuse_claims(self, text: str):
+        """Stop an unverifiable pilot/deployment claim before the network (MEM-18).
+
+        Not skippable: skip_verification is about links; a claim that an
+        institution runs our product needs a human, every time.
+        """
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from guardrails import ClaimNotVerified, claim_violations
+        found = claim_violations(text)
+        if found:
+            raise ClaimNotVerified("; ".join(found))
+
     def _verify_text_links(self, text: str, skip_verification: bool = False):
         """Verify all links in text before posting. Raises LinkVerificationError on failure."""
         if skip_verification or not self.verify_links or not self._verifier:
@@ -120,6 +133,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def post(self, text: str, skip_verification: bool = False) -> dict:
         """Post a standalone tweet."""
+        self._refuse_claims(text)
         self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
         result = self._oauth_post(TWEET_URL, {'text': text})
@@ -131,6 +145,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def reply(self, text: str, reply_to_id: str, skip_verification: bool = False) -> dict:
         """Reply to a tweet."""
+        self._refuse_claims(text)
         self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
         result = self._oauth_post(TWEET_URL, {
@@ -145,6 +160,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def quote_rt(self, text: str, tweet_id: str, skip_verification: bool = False) -> dict:
         """Quote retweet."""
+        self._refuse_claims(text)
         self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
         result = self._oauth_post(TWEET_URL, {
@@ -228,6 +244,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def post_with_media(self, text: str, media_ids: list) -> dict:
         """Post a tweet with media attachments."""
+        self._refuse_claims(text)
         self._check_rate_limit()
         payload = {'text': text, 'media': {'media_ids': media_ids}}
         result = self._oauth_post(TWEET_URL, payload)
@@ -239,6 +256,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def reply_with_media(self, text: str, reply_to_id: str, media_ids: list) -> dict:
         """Reply to a tweet with media attachments."""
+        self._refuse_claims(text)
         self._check_rate_limit()
         payload = {
             'text': text,
