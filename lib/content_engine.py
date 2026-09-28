@@ -44,7 +44,17 @@ import yaml
 DATA_DIR = Path(os.environ.get("DATACORE_ROOT", os.path.expanduser("~/Data")))
 MODULE_DIR = LIB_DIR.parent
 STATE_DIR = DATA_DIR / ".datacore" / "state"
-COMMS_DATA = MODULE_DIR / "data"
+# Watchlists, angles and feedback are user data: the space's private
+# module-data folder (comms_paths, MEM-63), resolved on first use.
+COMMS_DATA = None
+
+
+def _comms_data() -> Path:
+    global COMMS_DATA
+    if COMMS_DATA is None:
+        import comms_paths
+        COMMS_DATA = comms_paths.data_dir(create=False)
+    return COMMS_DATA
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
@@ -66,13 +76,13 @@ def load_yaml(path: Path) -> dict:
 
 def load_watchlist(account: str) -> List[Dict]:
     """Load watchlist for an account."""
-    data = load_yaml(COMMS_DATA / f"watchlist-{account}.yaml")
+    data = load_yaml(_comms_data() / f"watchlist-{account}.yaml")
     return data.get("accounts", [])
 
 
 def load_angles(account: str) -> List[Dict]:
     """Load brand angles for an account."""
-    data = load_yaml(COMMS_DATA / f"angles-{account}.yaml")
+    data = load_yaml(_comms_data() / f"angles-{account}.yaml")
     return data.get("angles", [])
 
 
@@ -189,7 +199,7 @@ def generate_content_queue(reddit_ideas: List[Dict], watchlist_ideas: List[Dict]
     }.get(account, "")
 
     # Load feedback
-    feedback_data = load_yaml(COMMS_DATA / "feedback.yaml")
+    feedback_data = load_yaml(_comms_data() / "feedback.yaml")
     feedback_items = [f for f in feedback_data.get("feedback", [])
                       if f.get("account", "") in (account, "all")]
     feedback_str = ""
