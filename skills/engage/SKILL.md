@@ -6,6 +6,8 @@ user-invocable: true
 
 # /engage — X Feed Engagement Agent
 
+`<executor-host>` below is the ssh alias of the host that runs this installation's comms jobs.
+
 Launch the Chrome-based X feed engagement agent. Likes, follows, drafts replies,
 and sends them to Telegram for approval. Runs in cycles until stopped.
 
@@ -32,14 +34,14 @@ Before starting the feed cycle, check if there are approved replies waiting
 to be posted on the **server** (where Telegram bot writes approvals):
 
 ```bash
-ssh nightshift "cat Data/.datacore/state/reply-queue.jsonl 2>/dev/null"
+ssh <executor-host> "cat Data/.datacore/state/reply-queue.jsonl 2>/dev/null"
 ```
 
 If entries exist, post them first via Chrome (navigate to target URL, type reply,
 click Reply button). Clear posted entries from the queue:
 
 ```bash
-ssh nightshift "echo '' > Data/.datacore/state/reply-queue.jsonl"
+ssh <executor-host> "echo '' > Data/.datacore/state/reply-queue.jsonl"
 ```
 
 ### Step 3: Launch feed engagement agent
@@ -92,10 +94,10 @@ To post via Chrome:
 This enables cooldown tracking, analytics, and engagement improvement.
 
 After EVERY successful reply post (whether from the reply queue, feed engagement,
-or manual Chrome posting), run this on nightshift:
+or manual Chrome posting), run this on the executor host:
 
 ```bash
-ssh nightshift "cd Data && python3 << 'PYEOF'
+ssh <executor-host> "cd Data && python3 << 'PYEOF'
 import sys, uuid; sys.path.insert(0, '.datacore/modules/comms/lib')
 import engagement_state as s
 from pathlib import Path
@@ -129,7 +131,7 @@ and `OUR_TWEET_ID_OR_unknown` with actual values.
 
 **Before replying**, check cooldown:
 ```bash
-ssh nightshift "cd Data && python3 -c \"
+ssh <executor-host> "cd Data && python3 -c \"
 import sys; sys.path.insert(0, '.datacore/modules/comms/lib')
 import engagement_state as s
 from pathlib import Path

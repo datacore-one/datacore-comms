@@ -560,12 +560,15 @@ def render_html(c: dict, today: dt.date | None = None, base: Path | None = None)
 
     hh = human_hours(c)
     tot_h = lambda who: sum(hh.get(who, {}).values())
+    # Whose time the headline counts: campaign.owner, else the first human listed.
+    owner = meta.get("owner") or next(
+        (k for k, p in people.items() if p.get("kind") == "human"), "")
     n_pub = sum(1 for d in ds if d.get("public"))
     n_fel = sum(1 for d in ds if d.get("source") == "fellowship")
     n_dec = sum(1 for x in c.get("decisions", []) if not x.get("decided"))
     metrics = [(len(ds), "deliverables"), (n_fel, "from the<br>Fellowship Plan"),
                (n_pub, "public pieces,<br>each approved by a person"),
-               (f'{_h(tot_h("gregor"))} h', "of Gregor's time<br>this quarter (est.)"),
+               (f'{_h(tot_h(owner))} h', f"of {e(name(owner))}'s time<br>this quarter (est.)"),
                (n_dec, "open decisions", "alarm")]
     mhtml = "".join(f'<div class="metric {m[2] if len(m) > 2 else ""}"><span class="n">{m[0]}</span>'
                     f'<span class="l">{m[1]}</span></div>' for m in metrics)
@@ -728,8 +731,7 @@ def render_html(c: dict, today: dt.date | None = None, base: Path | None = None)
   {flow}
   {f'<section><div class="sec-head"><h2>Cadences and workflows</h2><span class="eyebrow">how the work runs</span></div><p class="sec-sub">{e(c.get("cadences_note", ""))}</p>{render_cadences(c)}</section>' if (c.get("cadences") or c.get("workflows")) else ""}
   <section><div class="sec-head"><h2>The board</h2><span class="eyebrow">every deliverable</span></div>
-    <p class="sec-sub">Four columns, each in phase order. A purple edge marks the Fellowship Plan, whose dates
-    were shared with Swarm Foundation. Click a chip to filter; click it again to clear.</p>
+    <p class="sec-sub">{e(c.get("board_note", "Four columns, each in phase order. A purple edge marks the Fellowship Plan, whose dates were shared outside the team. Click a chip to filter; click it again to clear."))}</p>
     {_filters(c, ds, phases)}
     <div class="bcols">{board}</div>
     <p class="empty" id="empty" hidden>Nothing matches these filters.</p></section>

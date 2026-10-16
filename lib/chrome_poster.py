@@ -24,6 +24,7 @@ from pathlib import Path
 DATA_DIR = Path(os.environ.get("DATACORE_ROOT", Path.home() / "Data"))
 AUTH_STATE_FILE = DATA_DIR / ".datacore" / "state" / "x-auth-state.json"
 SCREENSHOT_DIR = DATA_DIR / ".datacore" / "state" / "chrome-screenshots"
+OUR_HANDLE = os.environ.get("X_ACCOUNT_HANDLE", "")  # posting account, without the @
 
 
 def _get_browser(playwright, headless: bool = True):
@@ -42,7 +43,7 @@ def setup_auth():
     """Interactive one-time setup: log in to X and save auth state."""
     from playwright.sync_api import sync_playwright
 
-    print("Opening browser for X login. Log in as @FairDataSociety, then press Enter here.")
+    print("Opening browser for X login. Log in as the posting account, then press Enter here.")
     print(f"Auth will be saved to: {AUTH_STATE_FILE}")
 
     AUTH_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -142,13 +143,13 @@ def post_reply(tweet_url: str, reply_text: str, timeout_ms: int = 30000) -> str:
                 # Look for our reply link in the thread
                 try:
                     time.sleep(2)
-                    # Find the most recently posted tweet by @FairDataSociety in the thread
+                    # Find the most recently posted tweet by our account in the thread
                     tweets = page.locator('[data-testid="tweet"]').all()
                     for tweet in reversed(tweets):
                         try:
                             link = tweet.locator('a[href*="/status/"]').last
                             href = link.get_attribute("href")
-                            if href and "/FairDataSociety/" in href:
+                            if href and OUR_HANDLE and f"/{OUR_HANDLE}/" in href:
                                 our_tweet_id = href.split("/status/")[-1].split("?")[0]
                                 break
                         except Exception:
@@ -169,11 +170,10 @@ def post_reply(tweet_url: str, reply_text: str, timeout_ms: int = 30000) -> str:
 if __name__ == "__main__":
     # DISABLED 2026-06-01 — chrome_poster uses Playwright to drive x.com directly.
     # Browser scripting of X (non-API automation) is explicit permanent-suspension
-    # grounds per X Automation Rules. This is the EXACT mechanism that suspended
-    # @FairDataSociety on 2026-05-20.
+    # grounds per X Automation Rules (https://help.x.com/en/rules-and-policies/x-automation).
     # To re-enable: nothing legitimate. Use OAuth API or manual web posting.
-    # See: 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md
-    sys.exit("DISABLED 2026-06-01 — Chrome scripting of x.com = permanent suspension grounds. See comms-redesign-research-2026-05-30.md")
+    # See: https://help.x.com/en/rules-and-policies/x-automation
+    sys.exit("DISABLED 2026-06-01 — Chrome scripting of x.com = permanent suspension grounds. See https://help.x.com/en/rules-and-policies/x-automation")
 
     if "--setup" in sys.argv:
         setup_auth()

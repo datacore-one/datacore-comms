@@ -21,9 +21,9 @@ def install(tmp_path, monkeypatch):
     space = root / "0-personal"
     (space / ".datacore").mkdir(parents=True)
     (space / ".datacore/config.yaml").write_text("space: {name: personal, type: personal}\n")
-    other = root / "9-practice/.datacore"
+    other = root / "2-other/.datacore"
     other.mkdir(parents=True)
-    (other / "config.yaml").write_text("space: {name: practice, type: personal}\n")
+    (other / "config.yaml").write_text("space: {name: other, type: personal}\n")
     monkeypatch.setenv("DATACORE_ROOT", str(root))
     monkeypatch.delenv("DATACORE_SPACE", raising=False)
     return root, space

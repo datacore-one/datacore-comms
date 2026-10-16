@@ -10,7 +10,7 @@ import hmac
 import json
 
 # DIP-0047: was a hand-rolled sys.path guess, which resolved to a tree with no
-# ledger package on plur-claw and silently recorded nothing for months.
+# ledger package on one host and silently recorded nothing for months.
 from datacore.ledger import attests
 import os
 import time

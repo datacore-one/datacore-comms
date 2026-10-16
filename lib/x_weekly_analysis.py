@@ -454,7 +454,12 @@ def main():
     args = parser.parse_args()
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    out = Path.home() / f"Data/3-fds/1-tracks/comms/reports/fds-x-deepanalysis-{today}.html"
+    # Report folder is per installation: set X_ANALYSIS_REPORT_DIR (e.g. the
+    # space's 1-tracks/comms/reports). Default: the installation's state folder.
+    report_dir = Path(os.environ.get("X_ANALYSIS_REPORT_DIR")
+                      or Path.home() / "Data" / ".datacore" / "state" / "comms" / "reports")
+    report_dir.mkdir(parents=True, exist_ok=True)
+    out = report_dir / f"fds-x-deepanalysis-{today}.html"
 
     print(f"Fetching {args.days} days of data for @FairDataSociety...")
     account, tweets = fetch_tweets(args.days)

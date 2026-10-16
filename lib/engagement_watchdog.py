@@ -378,8 +378,8 @@ if __name__ == "__main__":
     # functions (write_heartbeat, check_service_staleness) are still importable
     # for other modules.
     # To re-enable: remove the sys.exit below.
-    # See: 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md
-    sys.exit("DISABLED 2026-06-01 — dead-man auto-post violates X policy. See comms-redesign-research-2026-05-30.md")
+    # See: https://help.x.com/en/rules-and-policies/x-automation
+    sys.exit("DISABLED 2026-06-01 — dead-man auto-post violates X policy. See https://help.x.com/en/rules-and-policies/x-automation")
 
     dry_run = "--dry-run" in sys.argv
     run(dry_run=dry_run)

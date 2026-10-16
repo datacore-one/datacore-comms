@@ -11,6 +11,8 @@ recall:
 
 # Feed Engagement — Chrome-Based Organic Activity
 
+`<executor-host>` below is the ssh alias of the host that runs this installation's comms jobs.
+
 Run as a background agent on the local machine. Uses Chrome browser automation to
 scroll the X "For you" feed, like relevant content, follow interesting accounts,
 draft replies, and retweet exceptional content.
@@ -71,7 +73,7 @@ For tweets scoring 8+/10 relevance AND from accounts with >1K followers:
 
 1. **Author cooldown check** — skip if replied to this author in last 7 days:
    ```bash
-   ssh nightshift "cd Data && python3 -c \"
+   ssh <executor-host> "cd Data && python3 -c \"
    import sys; sys.path.insert(0, '.datacore/modules/comms/lib')
    import engagement_state as s
    st, _ = s.load('.datacore/state/engagement-state.json')
@@ -92,7 +94,7 @@ For tweets scoring 8+/10 relevance AND from accounts with >1K followers:
 
 4. **Evaluate the draft:**
    ```bash
-   ssh nightshift "cd Data && python3 -c \"
+   ssh <executor-host> "cd Data && python3 -c \"
    import sys; sys.path.insert(0, '.datacore/modules/comms/lib')
    from draft_evaluator import evaluate_draft
    ev = evaluate_draft('REPLY TEXT', '@AUTHOR', 'TWEET CONTENT')
@@ -107,7 +109,7 @@ For tweets scoring 8+/10 relevance AND from accounts with >1K followers:
      3. Wait 3s, screenshot to confirm
      4. Register in state:
         ```bash
-        ssh nightshift "cd Data && python3 << 'PYEOF'
+        ssh <executor-host> "cd Data && python3 << 'PYEOF'
         import sys, uuid; sys.path.insert(0, '.datacore/modules/comms/lib')
         import engagement_state as s
         from datetime import datetime, timezone, timedelta
@@ -123,7 +125,7 @@ For tweets scoring 8+/10 relevance AND from accounts with >1K followers:
         ```
    - **borderline (0.50–0.65)**: Send to Telegram:
      ```bash
-     ssh nightshift "cd Data && python3 -c \"
+     ssh <executor-host> "cd Data && python3 -c \"
      import sys; sys.path.insert(0, '.datacore/modules/comms/lib')
      from draft_pipeline import process_draft_pipeline
      r = process_draft_pipeline('REPLY', '@AUTHOR', 'CONTENT', 'URL', 'TWEET_ID', source='chrome')
@@ -248,7 +250,7 @@ You are adding to someone's conversation, not broadcasting. Sound like a person.
 At the START of every cycle (before scrolling the feed), check for approved replies:
 
 ```bash
-ssh nightshift "cat Data/.datacore/state/reply-queue.jsonl 2>/dev/null"
+ssh <executor-host> "cat Data/.datacore/state/reply-queue.jsonl 2>/dev/null"
 ```
 
 If entries exist:
@@ -257,7 +259,7 @@ If entries exist:
 3. **Capture our tweet ID**: after posting, look at the URL of our new reply in the thread or extract the tweet ID from any link that appears. The tweet ID is the number at the end of the tweet URL (e.g. `https://x.com/FairDataSociety/status/1234567890` → ID is `1234567890`). If you can't capture it, use `unknown`.
 4. **After each successful post**, immediately mark it done (updates state + removes from queue):
    ```bash
-   ssh nightshift "cd Data && python3 .datacore/modules/comms/lib/mark_reply_posted.py DRAFT_ID OUR_TWEET_ID"
+   ssh <executor-host> "cd Data && python3 .datacore/modules/comms/lib/mark_reply_posted.py DRAFT_ID OUR_TWEET_ID"
    ```
    Replace `DRAFT_ID` with the `draft_id` field and `OUR_TWEET_ID` with the captured tweet ID (or `unknown`).
 5. If a post fails (tweet deleted, replies restricted, etc.), skip it and still mark it done to avoid retrying forever.

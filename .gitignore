@@ -13,3 +13,6 @@ node_modules/
 
 # Private module data — belongs in the space that uses the module, never in code
 data/
+config/accounts.yaml
+config/anchor-accounts.yaml
+lib/anchor-accounts.yaml

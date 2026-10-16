@@ -203,8 +203,8 @@ Check:
      "https://getlate.dev/api/v1/posts"
    ```
 
-   Known account IDs:
-   - FairDataSociety: `69a1a943dc8cab9432aa82d6`
+   Account IDs: read `late_account_id` for the account from `config/accounts.yaml`
+   (untracked; copy `config/accounts.yaml.example` and fill it in).
 
 5. **Verify**: Wait 3 minutes, then check X timeline or Late.dev dashboard.
 

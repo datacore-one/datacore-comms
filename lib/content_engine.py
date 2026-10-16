@@ -738,9 +738,9 @@ def _get_openrouter_key() -> Optional[str]:
     This used to search `env var -> openrouter.env -> mrdata.env -> local.env ->
     .env` and take the first hit. That is the guessing this installation spent a
     week paying for: five files could hold the key, a search finds *a* value, and
-    nothing distinguishes a current one from an abandoned one. On 2026-08-18 the
-    copy in ~/.hermes/.env was dead (HTTP 401) while two others were live — a
-    search order deciding which of those you get is a coin toss with a bad side.
+    nothing distinguishes a current one from an abandoned one. A stale copy in a
+    second env file was dead (HTTP 401) while two others were live — a search
+    order deciding which of those you get is a coin toss with a bad side.
 
     `creds get` resolves the declared location, applies instance-local precedence
     so this machine uses ITS key rather than a fleet-wide one, verifies the value

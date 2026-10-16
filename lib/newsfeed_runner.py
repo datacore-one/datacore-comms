@@ -3,10 +3,10 @@
 
 DISABLED 2026-06-01 — NewsfeedMonitor auto-likes scored tweets, which
 violates X Authenticity policy (engagement spam → permanent suspension).
-This is the auto-like path that contributed to FDS suspension 2026-05-20.
+This is the auto-like path X's enforcement targets.
 
 To re-enable: remove the sys.exit() block below.
-See 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md.
+See https://help.x.com/en/rules-and-policies/authenticity
 """
 import sys
 sys.exit("DISABLED 2026-06-01 — auto-likes via newsfeed_monitor violate X policy. See comms-redesign-research-2026-05-30.md")

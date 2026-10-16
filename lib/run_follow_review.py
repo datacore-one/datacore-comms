@@ -2,11 +2,10 @@
 """Runner: weekly follow review + follow-back check. Called by systemd timer.
 
 DISABLED 2026-06-01 — automated unfollow violates X Authenticity policy
-(indiscriminate unfollowing → permanent suspension). Same enforcement path
-that took down FDS on 2026-05-20.
+(indiscriminate unfollowing → permanent suspension).
 
 To re-enable: remove the sys.exit() block below.
-See 5-plur/1-tracks/comms/comms-redesign-research-2026-05-30.md.
+See https://help.x.com/en/rules-and-policies/authenticity
 """
 import sys
 sys.exit("DISABLED 2026-06-01 — automated unfollow violates X policy. See comms-redesign-research-2026-05-30.md")

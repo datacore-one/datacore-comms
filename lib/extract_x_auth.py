@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""Extract X auth session from local browser and transfer to nightshift.
+"""Extract X auth session from local browser and transfer to the executor host.
 
 Reads cookies directly from your Chrome/Brave profile — no login required.
-Requires you to already be logged in to X as @FairDataSociety in Chrome or Brave.
+Requires you to already be logged in to X as the posting account in Chrome or Brave.
+Set EXECUTOR_SSH_HOST to the ssh alias of the host that runs the comms jobs.
 
 Usage:
     python3 extract_x_auth.py
 """
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
 DATA_DIR = Path.home() / "Data"
 LOCAL_AUTH = DATA_DIR / ".datacore" / "state" / "x-auth-state.json"
-NIGHTSHIFT_AUTH = "nightshift:~/Data/.datacore/state/x-auth-state.json"
+EXECUTOR_HOST = os.environ.get("EXECUTOR_SSH_HOST", "")
+NIGHTSHIFT_AUTH = f"{EXECUTOR_HOST or '<executor-host>'}:~/Data/.datacore/state/x-auth-state.json"
 
 REQUIRED_COOKIES = {"auth_token", "ct0"}
 
@@ -73,13 +76,16 @@ def main():
     LOCAL_AUTH.write_text(json.dumps(state, indent=2))
     print(f"Auth saved locally: {LOCAL_AUTH} ({len(cookies)} cookies)")
 
-    print("Transferring to nightshift...")
+    if not EXECUTOR_HOST:
+        print(f"EXECUTOR_SSH_HOST not set. Manual transfer: rsync {LOCAL_AUTH} {NIGHTSHIFT_AUTH}")
+        return 0
+    print(f"Transferring to {EXECUTOR_HOST}...")
     result = subprocess.run(
         ["rsync", "-avz", str(LOCAL_AUTH), NIGHTSHIFT_AUTH],
         capture_output=True, text=True
     )
     if result.returncode == 0:
-        print("Done. Nightshift can now post via Chrome.")
+        print("Done. The executor host can now post via Chrome.")
     else:
         print(f"rsync failed: {result.stderr}")
         print(f"Manual transfer: rsync {LOCAL_AUTH} {NIGHTSHIFT_AUTH}")

@@ -11,13 +11,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
 def _campaign(**over):
     c = {
         "campaign": {"id": "t", "title": "T", "window": {"start": "2026-10-01", "end": "2026-12-18"}},
-        "people": {"gregor": {"name": "Gregor", "kind": "human"},
+        "people": {"alex": {"name": "Alex", "kind": "human"},
                    "data": {"name": "Data", "kind": "agent"}},
-        "tracks": {"datafund": {"name": "Datafund"}},
-        "gates": {"H2": {"title": "Every public piece", "who": "gregor"}},
+        "tracks": {"acme": {"name": "Acme"}},
+        "gates": {"H2": {"title": "Every public piece", "who": "alex"}},
         "deliverables": [{
-            "id": "D-001", "track": "datafund", "type": "blog", "title": "A post",
-            "public": True, "drafter": "data", "approver": "gregor", "gate": "H2",
+            "id": "D-001", "track": "acme", "type": "blog", "title": "A post",
+            "public": True, "drafter": "data", "approver": "alex", "gate": "H2",
             "due": "2026-10-15", "status": "planned", "source": "fellowship",
             "done_when": {"condition": "Published", "evidence": "url", "verify": "open the URL"},
         }],
@@ -71,8 +71,8 @@ def test_html_shows_deliverable_and_weekday_computed(tmp_path):
 
 def test_real_campaign_file_validates():
     from campaign_board import validate
-    p = (Path(__file__).resolve().parents[4] / "1-datafund/1-tracks/comms/campaigns"
-         / "provenance-2026-q4/campaign.yaml")
+    import os
+    p = Path(os.environ.get("COMMS_CAMPAIGN_YAML", "/nonexistent/campaign.yaml"))
     if not p.exists():
         import pytest
         pytest.skip("campaign.yaml lives in the user's space")
@@ -83,7 +83,7 @@ def test_every_deliverable_is_filterable():
     from campaign_board import render_html
     out = render_html(_campaign())
     assert 'id="fbar"' in out
-    for attr in ('data-who="data gregor"', 'data-kind="fellowship public"', 'class="chip"'):
+    for attr in ('data-who="alex data"', 'data-kind="fellowship public"', 'class="chip"'):
         assert attr in out
 
 
@@ -111,7 +111,7 @@ def test_hidden_cards_really_disappear():
 def test_board_has_one_column_per_group():
     from campaign_board import render_html
     c = _campaign()
-    c["columns"] = [{"name": "Fellowship Plan", "source": "fellowship"}, {"name": "Stories", "tracks": ["datafund"]}]
+    c["columns"] = [{"name": "Fellowship Plan", "source": "fellowship"}, {"name": "Stories", "tracks": ["acme"]}]
     out = render_html(c)
     assert 'class="bcol"' in out and "Fellowship Plan" in out
 
@@ -120,8 +120,8 @@ def test_human_effort_is_summed_per_person():
     from campaign_board import validate, render_html
     c = _campaign()
     c["phases"] = [{"id": "P1", "name": "Prepare", "start": "2026-10-01", "end": "2026-10-31"}]
-    c["human_effort"] = {"D-001": {"gregor": 1.5}}
-    c["recurring_human"] = [{"what": "board", "person": "gregor", "hours_per_week": 1,
+    c["human_effort"] = {"D-001": {"alex": 1.5}}
+    c["recurring_human"] = [{"what": "board", "person": "alex", "hours_per_week": 1,
                              "start": "2026-10-05", "end": "2026-10-18"}]
     assert validate(c) == []
     assert "3.5" in render_html(c)  # 1.5 one-off + 2 weeks x 1h
@@ -130,7 +130,7 @@ def test_human_effort_is_summed_per_person():
 def test_effort_for_unknown_item_or_agent_is_refused():
     from campaign_board import validate
     c = _campaign()
-    c["human_effort"] = {"NOPE": {"gregor": 1}, "D-001": {"data": 2}}
+    c["human_effort"] = {"NOPE": {"alex": 1}, "D-001": {"data": 2}}
     errs = " ".join(validate(c))
     assert "NOPE" in errs and "data" in errs
 
@@ -138,7 +138,7 @@ def test_effort_for_unknown_item_or_agent_is_refused():
 def test_risk_and_infra_values_are_checked():
     from campaign_board import validate
     c = _campaign()
-    c["risks"] = [{"id": "K1", "risk": "x", "likelihood": "often", "impact": "high", "mitigation": "y", "owner": "gregor"}]
+    c["risks"] = [{"id": "K1", "risk": "x", "likelihood": "often", "impact": "high", "mitigation": "y", "owner": "alex"}]
     c["infra"] = [{"part": "x", "confidence": 140}]
     errs = " ".join(validate(c))
     assert "often" in errs and "140" in errs
@@ -157,7 +157,7 @@ def test_streams_render_in_priority_order_with_fallback():
         {"id": "S1", "name": "Backbone", "start": "2026-10-01", "end": "2026-11-29",
          "source": "fellowship", "role": "first", "throttle": "never cut"},
         {"id": "S2", "name": "Extras", "start": "2026-10-15", "end": "2026-12-18",
-         "tracks": ["datafund"], "expands_when": "approvals keep up", "throttle": "cut first"},
+         "tracks": ["acme"], "expands_when": "approvals keep up", "throttle": "cut first"},
     ]
     assert validate(c) == []
     out = render_html(c)
@@ -177,6 +177,6 @@ def test_cadences_render_by_frequency():
     c = _campaign()
     c["cadences"] = [{"every": "daily", "what": "Amplification queue", "who": "data", "output": "queue file",
                       "gate": "H2", "runs": "agent"}]
-    c["workflows"] = [{"name": "A news item", "steps": ["Tris adds", "Gregor picks"]}]
+    c["workflows"] = [{"name": "A news item", "steps": ["An agent adds", "Alex picks"]}]
     out = render_html(c)
-    assert "Amplification queue" in out and "Gregor picks" in out
+    assert "Amplification queue" in out and "Alex picks" in out

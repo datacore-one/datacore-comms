@@ -271,11 +271,11 @@ When positioning privacy products, lead with:
 
 ---
 
-## Session: X Compliance Architecture (2026-06-04)
+## Session: X Compliance Architecture
 
 ### Pattern: X Portfolio Enforcement Cascade
 
-**Context**: @FDS account was suspended during session. @plur_ai subsequently received a "verify yourself" lock even though it had not been involved in any violation.
+**Context**: One account in a portfolio was suspended; a sibling account then received a "verify yourself" lock even though it had not been involved in any violation.
 
 **Pattern**: X enforcement can propagate across accounts that share ownership signals (email, phone, IP, payment method). When one account in a portfolio faces enforcement, check all sibling accounts immediately.
 
@@ -287,7 +287,7 @@ When positioning privacy products, lead with:
 
 ### Pattern: X 403 "Temporarily Locked" — Try Web First
 
-**Context**: API 403 errors with "temporarily locked" messaging appeared after @FDS suspension. Initial read was "permanent enforcement".
+**Context**: API 403 errors with "temporarily locked" messaging appeared after a sibling account's suspension. Initial read was "permanent enforcement".
 
 **Pattern**: A 403 "temporarily locked" via the API is not necessarily permanent. X uses this code for verify-yourself challenges that are clearable via a web browser login. Web login presents the challenge; completing it restores API access.
 
