@@ -40,6 +40,8 @@ requires:
       - MEDIUM_TOKEN             # Medium API for blog cross-posting
 
 provides:
+  skills:
+    - engage
   tools:
     - name: engagement_status
       description: "Engagement pipeline status — pending, posted, limits"
@@ -73,6 +75,8 @@ provides:
     # Video
     - name: demo-video
       description: Demo video pipeline — screen recording to styled captions to X post via ffmpeg + Late.dev
+    - name: feed-engage
+    - name: today-hook
     # Landing
     # Ads
     # Analytics
