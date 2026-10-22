@@ -45,6 +45,7 @@ ACCOUNT_PREFIXES = {
     'datacore': 'DATACORE_X_',
     'mr_data_dc': 'MRDATA_X_',
     'plur': 'PLUR_X_',
+    'datafund': 'DATAFUND_X_',
 }
 
 # Kill switch — if this file exists, all posting is halted

@@ -27,6 +27,19 @@ class TestAccountSelection:
             assert poster.api_key == 'fds_key'
             assert poster.api_secret == 'fds_secret'
 
+    def test_datafund_account_uses_datafund_prefix(self):
+        from x_poster import XPoster
+        env = {
+            'DATAFUND_X_API_KEY': 'df_key',
+            'DATAFUND_X_API_SECRET': 'df_secret',
+            'DATAFUND_X_ACCESS_TOKEN': 'df_token',
+            'DATAFUND_X_ACCESS_TOKEN_SECRET': 'df_tsecret',
+        }
+        with patch.dict(os.environ, env, clear=False):
+            poster = XPoster(account='datafund')
+            assert poster.api_key == 'df_key'
+            assert poster.access_token_secret == 'df_tsecret'
+
     def test_unknown_account_raises(self):
         from x_poster import XPoster
         with pytest.raises(ValueError, match="Unknown account"):
