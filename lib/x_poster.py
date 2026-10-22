@@ -30,6 +30,7 @@ from datacore.ledger import attests
 import os
 import secrets
 import sqlite3
+import subprocess
 import time
 import urllib.parse
 from pathlib import Path
@@ -421,3 +422,74 @@ class XPoster:
                 time.sleep(min(retry_after + 5, 900))
                 return self._oauth_delete(url, _retries=_retries + 1)
             raise Exception(f"X API error {e.code}: {error_body}")
+
+
+def _fill_from_broker(prefix: str) -> None:
+    """Missing credential values come from `creds get`, never from a file search.
+
+    Values stay in this process: set in os.environ for XPoster, never printed.
+    """
+    for suffix in ("API_KEY", "API_SECRET", "ACCESS_TOKEN", "ACCESS_TOKEN_SECRET"):
+        var = f"{prefix}{suffix}"
+        if os.environ.get(var):
+            continue
+        r = subprocess.run(["creds", "get", var, "--consumer", "x-poster"],
+                           capture_output=True, text=True)
+        if r.returncode != 0 or not r.stdout.strip():
+            raise KeyError(f"{var}: creds get failed (exit {r.returncode})")
+        os.environ[var] = r.stdout.strip()
+
+
+def main(argv=None) -> int:
+    """Run the poster as a script, so the agent guard sees a post as one.
+
+        x_poster.py --account datafund --whoami
+        x_poster.py --account datafund --recent 10
+        x_poster.py --account datafund --post-file post.txt
+    """
+    import argparse
+    import sys
+    ap = argparse.ArgumentParser(description="Post to X as one configured account.")
+    ap.add_argument("--account", required=True, help=f"one of {', '.join(ACCOUNT_PREFIXES)}")
+    act = ap.add_mutually_exclusive_group(required=True)
+    act.add_argument("--whoami", action="store_true", help="print the account's handle (read-only)")
+    act.add_argument("--recent", type=int, metavar="N", help="print the account's last N posts (read-only)")
+    act.add_argument("--post-file", type=Path, metavar="FILE", help="post FILE's text as one post")
+    ap.add_argument("--state-dir", help=argparse.SUPPRESS)
+    a = ap.parse_args(argv)
+
+    prefix = ACCOUNT_PREFIXES.get(a.account)
+    if not prefix:
+        print(f"unknown account {a.account!r}; known: {', '.join(ACCOUNT_PREFIXES)}", file=sys.stderr)
+        return 2
+    text = None
+    if a.post_file is not None:
+        text = a.post_file.read_text().strip()
+        if not text:
+            print(f"{a.post_file}: empty, nothing posted", file=sys.stderr)
+            return 2
+    try:
+        _fill_from_broker(prefix)
+        poster = XPoster(account=a.account, state_dir=a.state_dir)
+        me = poster._oauth_get("https://api.x.com/2/users/me").get("data") or {}
+        handle = me.get("username", "?")
+        if a.whoami:
+            print(f"@{handle}")
+        elif a.recent:
+            n = max(5, min(a.recent, 100))
+            r = poster._oauth_get(f"https://api.x.com/2/users/{me.get('id')}/tweets"
+                                  f"?max_results={n}&tweet.fields=created_at")
+            for t in (r.get("data") or [])[:a.recent]:
+                print(f"{t.get('created_at', '')}  https://x.com/{handle}/status/{t.get('id')}")
+                print("  " + t.get("text", "").replace("\n", "\n  "))
+        else:
+            r = poster.post(text)
+            print(f"posted: https://x.com/{handle}/status/{(r.get('data') or {}).get('id')}")
+    except Exception as exc:  # noqa: BLE001 -- reported, exit non-zero
+        print(f"x_poster: {type(exc).__name__}: {str(exc)[:300]}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
