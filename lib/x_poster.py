@@ -247,6 +247,7 @@ class XPoster:
     def post_with_media(self, text: str, media_ids: list) -> dict:
         """Post a tweet with media attachments."""
         self._refuse_claims(text)
+        self._verify_text_links(text)
         self._check_rate_limit()
         payload = {'text': text, 'media': {'media_ids': media_ids}}
         result = self._oauth_post(TWEET_URL, payload)
@@ -455,8 +456,18 @@ def main(argv=None) -> int:
     act.add_argument("--whoami", action="store_true", help="print the account's handle (read-only)")
     act.add_argument("--recent", type=int, metavar="N", help="print the account's last N posts (read-only)")
     act.add_argument("--post-file", type=Path, metavar="FILE", help="post FILE's text as one post")
+    ap.add_argument("--media", action="append", type=Path, metavar="IMAGE",
+                    help="attach IMAGE to the --post-file post (repeatable)")
     ap.add_argument("--state-dir", help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
+    media = a.media or []
+    if media and a.post_file is None:
+        print("--media needs --post-file", file=sys.stderr)
+        return 2
+    missing = [str(m) for m in media if not m.is_file()]
+    if missing:
+        print(f"media not found: {', '.join(missing)}; nothing posted", file=sys.stderr)
+        return 2
 
     prefix = ACCOUNT_PREFIXES.get(a.account)
     if not prefix:
@@ -482,6 +493,9 @@ def main(argv=None) -> int:
             for t in (r.get("data") or [])[:a.recent]:
                 print(f"{t.get('created_at', '')}  https://x.com/{handle}/status/{t.get('id')}")
                 print("  " + t.get("text", "").replace("\n", "\n  "))
+        elif media:
+            r = poster.post_with_media(text, [poster.upload_media(str(m)) for m in media])
+            print(f"posted: https://x.com/{handle}/status/{(r.get('data') or {}).get('id')}")
         else:
             r = poster.post(text)
             print(f"posted: https://x.com/{handle}/status/{(r.get('data') or {}).get('id')}")

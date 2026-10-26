@@ -68,6 +68,56 @@ def test_missing_values_come_from_the_broker(monkeypatch, capsys):
     assert "value" not in capsys.readouterr().out
 
 
+def test_media_is_uploaded_and_attached(tmp_path, capsys):
+    # A post with an image card (2026-10-26): the order's P2-P7 carry one, and
+    # the owner's grant covers posting only through this script.
+    import x_poster
+    f = tmp_path / "post.txt"
+    f.write_text("Card post.\n")
+    card = tmp_path / "card-3.png"
+    card.write_bytes(b"\x89PNG fixture")
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, '_oauth_get', return_value={'data': {'username': 'DataFundProject', 'id': '9'}}), \
+         patch.object(x_poster.XPoster, 'upload_media', return_value='777') as up, \
+         patch.object(x_poster.XPoster, 'post_with_media', return_value={'data': {'id': '124'}}) as pwm, \
+         patch.object(x_poster.XPoster, 'post') as plain:
+        assert x_poster.main(['--account', 'datafund', '--post-file', str(f), '--media', str(card),
+                              '--state-dir', str(tmp_path)]) == 0
+    assert up.call_args[0][0] == str(card)
+    assert pwm.call_args[0] == ("Card post.", ['777'])
+    plain.assert_not_called()
+    assert 'https://x.com/DataFundProject/status/124' in capsys.readouterr().out
+
+
+def test_a_missing_media_file_posts_nothing(tmp_path):
+    import x_poster
+    f = tmp_path / "post.txt"
+    f.write_text("Card post.\n")
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, 'upload_media') as up, \
+         patch.object(x_poster.XPoster, 'post_with_media') as pwm:
+        assert x_poster.main(['--account', 'datafund', '--post-file', str(f),
+                              '--media', str(tmp_path / "absent.png"), '--state-dir', str(tmp_path)]) != 0
+    up.assert_not_called()
+    pwm.assert_not_called()
+
+
+def test_a_media_post_has_its_links_verified(tmp_path):
+    import x_poster
+    poster = x_poster.XPoster.__new__(x_poster.XPoster)
+    calls = []
+    poster._refuse_claims = lambda t: calls.append("claims")
+    poster._verify_text_links = lambda t, skip_verification=False: calls.append("links")
+    poster._check_rate_limit = lambda: None
+    poster._increment_rate_count = lambda: None
+    poster._oauth_post = lambda url, payload: {'data': {'id': '1'}}
+    poster.account = 'datafund'
+    x_poster.XPoster.post_with_media.__wrapped__(poster, "text https://example.org", ['1']) \
+        if hasattr(x_poster.XPoster.post_with_media, '__wrapped__') \
+        else x_poster.XPoster.post_with_media(poster, "text https://example.org", ['1'])
+    assert calls == ["claims", "links"]
+
+
 def test_unknown_account_fails():
     import x_poster
     assert x_poster.main(['--account', 'nobody', '--whoami']) != 0
