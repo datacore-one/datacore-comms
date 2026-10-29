@@ -121,3 +121,67 @@ def test_a_media_post_has_its_links_verified(tmp_path):
 def test_unknown_account_fails():
     import x_poster
     assert x_poster.main(['--account', 'nobody', '--whoami']) != 0
+
+
+# --- Duplicate guard and delete (2026-10-29) ---
+# A ledger retry posted P7 three times: the task's check failed after each
+# post, and each retry posted again. The poster now refuses a post whose text
+# the account already published, so a retry cannot double-post.
+
+ME = {'data': {'username': 'DataFundProject', 'id': '9'}}
+
+
+def _recent(*texts):
+    return {'data': [{'id': str(100 + i), 'text': t} for i, t in enumerate(texts)]}
+
+
+def _gets(recent):
+    return lambda url, *a, **k: recent if '/tweets' in url else ME
+
+
+def test_a_post_the_account_already_published_is_refused(tmp_path, capsys):
+    import x_poster
+    f = tmp_path / "post.txt"
+    f.write_text("Try it: dataprovenance.app\n\nPre-release. https://datafund.io/blog/x/\n")
+    live = "Try it: https://t.co/a\n\nPre-release. https://t.co/b https://t.co/c"
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, '_oauth_get', side_effect=_gets(_recent("other", live))), \
+         patch.object(x_poster.XPoster, 'post') as post, \
+         patch.object(x_poster.XPoster, 'post_with_media') as pwm:
+        rc = x_poster.main(['--account', 'datafund', '--post-file', str(f), '--state-dir', str(tmp_path)])
+    assert rc == 3
+    post.assert_not_called()
+    pwm.assert_not_called()
+    assert 'already posted: https://x.com/DataFundProject/status/101' in capsys.readouterr().out
+
+
+def test_a_new_post_still_goes_out_when_recent_posts_differ(tmp_path):
+    import x_poster
+    f = tmp_path / "post.txt"
+    f.write_text("Something new.\n")
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, '_oauth_get', side_effect=_gets(_recent("Something old."))), \
+         patch.object(x_poster.XPoster, 'post', return_value={'data': {'id': '5'}}) as post:
+        assert x_poster.main(['--account', 'datafund', '--post-file', str(f), '--state-dir', str(tmp_path)]) == 0
+    post.assert_called_once()
+
+
+def test_delete_removes_the_accounts_own_post(tmp_path, capsys):
+    import x_poster
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, '_oauth_get',
+                      side_effect=lambda url, *a, **k: {'data': {'author_id': '9'}} if '/tweets/77' in url else ME), \
+         patch.object(x_poster.XPoster, '_oauth_delete', return_value={'data': {'deleted': True}}) as d:
+        assert x_poster.main(['--account', 'datafund', '--delete', '77', '--state-dir', str(tmp_path)]) == 0
+    assert d.call_args[0][0] == "https://api.x.com/2/tweets/77"
+    assert 'deleted: 77' in capsys.readouterr().out
+
+
+def test_delete_refuses_a_post_by_another_account(tmp_path):
+    import x_poster
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, '_oauth_get',
+                      side_effect=lambda url, *a, **k: {'data': {'author_id': '1'}} if '/tweets/77' in url else ME), \
+         patch.object(x_poster.XPoster, '_oauth_delete') as d:
+        assert x_poster.main(['--account', 'datafund', '--delete', '77', '--state-dir', str(tmp_path)]) != 0
+    d.assert_not_called()

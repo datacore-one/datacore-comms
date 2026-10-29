@@ -28,6 +28,7 @@ import json
 # class is wired in module.yaml and run_follow_daily.py and posted unattested.
 from datacore.ledger import attests
 import os
+import re
 import secrets
 import sqlite3
 import subprocess
@@ -441,12 +442,35 @@ def _fill_from_broker(prefix: str) -> None:
         os.environ[var] = r.stdout.strip()
 
 
+def _norm(text: str) -> str:
+    """Post text with links (X rewrites them, bare domains too) made comparable."""
+    text = re.sub(r"https?://\S+|\b[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}(?:/\S*)?", "<link>", text)
+    return re.sub(r"( <link>)+$", "", " ".join(text.split()))
+
+
+def _already_posted(poster, me: dict, text: str):
+    """The id of a recent post of this account with the same text, or None.
+
+    A retried task once posted the same post three times (2026-10-29): its
+    check failed after each post and each retry posted again. Posting cannot
+    be undone, so the poster itself refuses a repeat.
+    """
+    r = poster._oauth_get(f"https://api.x.com/2/users/{me.get('id')}/tweets?max_results=20")
+    recent = r.get("data") if isinstance(r.get("data"), list) else []
+    want = _norm(text)
+    return next((t.get("id") for t in recent if _norm(t.get("text", "")) == want), None)
+
+
 def main(argv=None) -> int:
     """Run the poster as a script, so the agent guard sees a post as one.
 
         x_poster.py --account datafund --whoami
         x_poster.py --account datafund --recent 10
         x_poster.py --account datafund --post-file post.txt
+        x_poster.py --account datafund --delete POST_ID
+
+    Exit 3: the post's text is already among the account's recent posts;
+    nothing posted, the existing URL printed.
     """
     import argparse
     import sys
@@ -456,6 +480,7 @@ def main(argv=None) -> int:
     act.add_argument("--whoami", action="store_true", help="print the account's handle (read-only)")
     act.add_argument("--recent", type=int, metavar="N", help="print the account's last N posts (read-only)")
     act.add_argument("--post-file", type=Path, metavar="FILE", help="post FILE's text as one post")
+    act.add_argument("--delete", metavar="POST_ID", help="delete one of this account's own posts")
     ap.add_argument("--media", action="append", type=Path, metavar="IMAGE",
                     help="attach IMAGE to the --post-file post (repeatable)")
     ap.add_argument("--state-dir", help=argparse.SUPPRESS)
@@ -493,6 +518,16 @@ def main(argv=None) -> int:
             for t in (r.get("data") or [])[:a.recent]:
                 print(f"{t.get('created_at', '')}  https://x.com/{handle}/status/{t.get('id')}")
                 print("  " + t.get("text", "").replace("\n", "\n  "))
+        elif a.delete:
+            author = (poster.get_tweet(a.delete, fields="author_id").get("data") or {}).get("author_id")
+            if author != me.get("id"):
+                print(f"post {a.delete} is not by @{handle}; nothing deleted", file=sys.stderr)
+                return 1
+            poster._oauth_delete(f"https://api.x.com/2/tweets/{a.delete}")
+            print(f"deleted: {a.delete}")
+        elif (dup := _already_posted(poster, me, text)):
+            print(f"already posted: https://x.com/{handle}/status/{dup}")
+            return 3
         elif media:
             r = poster.post_with_media(text, [poster.upload_media(str(m)) for m in media])
             print(f"posted: https://x.com/{handle}/status/{(r.get('data') or {}).get('id')}")
