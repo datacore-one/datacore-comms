@@ -185,3 +185,75 @@ def test_delete_refuses_a_post_by_another_account(tmp_path):
          patch.object(x_poster.XPoster, '_oauth_delete') as d:
         assert x_poster.main(['--account', 'datafund', '--delete', '77', '--state-dir', str(tmp_path)]) != 0
     d.assert_not_called()
+
+
+def test_mp4_media_goes_through_video_upload(tmp_path, capsys):
+    """The 0.23 launch post carries the explainer video (owner, 2026-10-30)."""
+    import x_poster
+    f = tmp_path / "post.txt"
+    f.write_text("Launch.\n")
+    v = tmp_path / "explainer.mp4"
+    v.write_bytes(b"\0" * 10)
+    with patch.dict(os.environ, ENV), \
+         patch.object(x_poster.XPoster, '_oauth_get', return_value={'data': {'username': 'plur_ai', 'id': '9'}}), \
+         patch.object(x_poster.XPoster, 'upload_video', return_value='777') as up_v, \
+         patch.object(x_poster.XPoster, 'upload_media') as up_i, \
+         patch.object(x_poster.XPoster, 'post_with_media', return_value={'data': {'id': '5', 'text': 'Launch.'}}) as pwm:
+        assert x_poster.main(['--account', 'datafund', '--post-file', str(f), '--media', str(v),
+                              '--state-dir', str(tmp_path)]) == 0
+    up_v.assert_called_once_with(str(v))
+    up_i.assert_not_called()
+    assert pwm.call_args[0][1] == ['777']
+
+
+def test_upload_video_initializes_appends_in_order_finalizes_and_waits(tmp_path, monkeypatch):
+    import x_poster
+    monkeypatch.setattr(x_poster, 'VIDEO_CHUNK', 4)
+    monkeypatch.setattr(x_poster.time, 'sleep', lambda s: None)
+    v = tmp_path / "explainer.mp4"
+    v.write_bytes(b"abcdefghij")  # 10 bytes -> 3 chunks of 4
+    calls = []
+
+    def fake_post(self, url, payload):
+        calls.append(('json', url, payload))
+        if url.endswith('/initialize'):
+            return {'data': {'id': 'M1'}}
+        return {'data': {'id': 'M1', 'processing_info': {'state': 'pending', 'check_after_secs': 1}}}
+
+    def fake_append(self, url, chunk, index):
+        calls.append(('append', url, index, chunk))
+
+    states = iter(['in_progress', 'succeeded'])
+
+    def fake_get(self, url):
+        calls.append(('get', url))
+        return {'data': {'id': 'M1', 'processing_info': {'state': next(states), 'check_after_secs': 1}}}
+
+    with patch.dict(os.environ, ENV):
+        p = x_poster.XPoster(account='datafund', state_dir=str(tmp_path))
+    monkeypatch.setattr(x_poster.XPoster, '_oauth_post', fake_post)
+    monkeypatch.setattr(x_poster.XPoster, '_oauth_append', fake_append)
+    monkeypatch.setattr(x_poster.XPoster, '_oauth_get', fake_get)
+    assert p.upload_video(str(v)) == 'M1'
+    init = calls[0]
+    assert init[1].endswith('/2/media/upload/initialize')
+    assert init[2] == {'media_type': 'video/mp4', 'total_bytes': 10, 'media_category': 'tweet_video'}
+    appends = [c for c in calls if c[0] == 'append']
+    assert [c[2] for c in appends] == [0, 1, 2]
+    assert b''.join(c[3] for c in appends) == b'abcdefghij'
+    assert any(c[0] == 'json' and c[1].endswith('/2/media/upload/M1/finalize') for c in calls)
+    assert sum(1 for c in calls if c[0] == 'get') == 2
+
+
+def test_upload_video_raises_when_processing_fails(tmp_path, monkeypatch):
+    import x_poster
+    monkeypatch.setattr(x_poster.time, 'sleep', lambda s: None)
+    v = tmp_path / "explainer.mp4"
+    v.write_bytes(b"abc")
+    with patch.dict(os.environ, ENV):
+        p = x_poster.XPoster(account='datafund', state_dir=str(tmp_path))
+    monkeypatch.setattr(x_poster.XPoster, '_oauth_post', lambda self, u, pl: {'data': {'id': 'M1', 'processing_info': {'state': 'pending', 'check_after_secs': 1}}})
+    monkeypatch.setattr(x_poster.XPoster, '_oauth_append', lambda self, u, c, i: None)
+    monkeypatch.setattr(x_poster.XPoster, '_oauth_get', lambda self, u: {'data': {'processing_info': {'state': 'failed', 'error': {'message': 'too long'}}}})
+    with pytest.raises(Exception, match='too long'):
+        p.upload_video(str(v))

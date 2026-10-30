@@ -265,6 +265,8 @@ exempt:
     reason: media upload is a precursor; the post that uses it is attested
   - fn: "lib/x_poster.py:upload_media"
     reason: media upload is a precursor; post_with_media is attested
+  - fn: "lib/x_poster.py:_oauth_append"
+    reason: video chunk upload is a precursor; post_with_media is attested
   - fn: "lib/x_poster.py:_oauth_post"
     reason: transport helper; every caller that publishes is attested above
   - fn: "lib/x_poster.py:_oauth_delete"

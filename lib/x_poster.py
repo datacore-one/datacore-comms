@@ -39,6 +39,8 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
 TWEET_URL = "https://api.x.com/2/tweets"
+MEDIA_URL = "https://api.x.com/2/media/upload"
+VIDEO_CHUNK = 4 * 1024 * 1024  # X accepts up to 5 MB per append
 
 # Map account names to env var prefixes
 ACCOUNT_PREFIXES = {
@@ -241,6 +243,41 @@ class XPoster:
         except HTTPError as e:
             error_body = e.read().decode()
             raise Exception(f"Media upload error {e.code}: {error_body}")
+
+    def upload_video(self, video_path: str) -> str:
+        """Upload an MP4 in chunks and return its media id once X has processed it.
+
+        X API v2: initialize, append each chunk, finalize, then poll until the
+        processing state is succeeded. A standard account takes up to 140 s.
+        """
+        data = Path(video_path).read_bytes()
+        init = self._oauth_post(f"{MEDIA_URL}/initialize", {
+            'media_type': 'video/mp4', 'total_bytes': len(data), 'media_category': 'tweet_video'})
+        media_id = (init.get('data') or {})['id']
+        for index, start in enumerate(range(0, len(data), VIDEO_CHUNK)):
+            self._oauth_append(f"{MEDIA_URL}/{media_id}/append", data[start:start + VIDEO_CHUNK], index)
+        info = (self._oauth_post(f"{MEDIA_URL}/{media_id}/finalize", {}).get('data') or {}).get('processing_info')
+        while info and info.get('state') in ('pending', 'in_progress'):
+            time.sleep(int(info.get('check_after_secs', 2)))
+            r = self._oauth_get(f"{MEDIA_URL}?command=STATUS&media_id={media_id}")
+            info = (r.get('data') or {}).get('processing_info')
+        if info and info.get('state') != 'succeeded':
+            raise Exception(f"Video processing {info.get('state')}: {(info.get('error') or {}).get('message', '')}")
+        return media_id
+
+    def _oauth_append(self, url: str, chunk: bytes, index: int) -> None:
+        boundary = secrets.token_hex(16)
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"segment_index\"\r\n\r\n{index}\r\n"
+                f"--{boundary}\r\nContent-Disposition: form-data; name=\"media\"; filename=\"chunk\"\r\n"
+                f"Content-Type: application/octet-stream\r\n\r\n").encode() + chunk + f"\r\n--{boundary}--\r\n".encode()
+        req = Request(url, data=body, method="POST")
+        req.add_header("Authorization", self._oauth_header("POST", url))
+        req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+        try:
+            with urlopen(req, timeout=120):
+                pass
+        except HTTPError as e:
+            raise Exception(f"Video append error {e.code}: {e.read().decode()}")
 
     @attests("x.post",
              ref=lambda r: ((r or {}).get("data") or {}).get("id", ""),
@@ -482,7 +519,7 @@ def main(argv=None) -> int:
     act.add_argument("--post-file", type=Path, metavar="FILE", help="post FILE's text as one post")
     act.add_argument("--delete", metavar="POST_ID", help="delete one of this account's own posts")
     ap.add_argument("--media", action="append", type=Path, metavar="IMAGE",
-                    help="attach IMAGE to the --post-file post (repeatable)")
+                    help="attach IMAGE (or one .mp4 video) to the --post-file post (repeatable)")
     ap.add_argument("--state-dir", help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     media = a.media or []
@@ -529,7 +566,8 @@ def main(argv=None) -> int:
             print(f"already posted: https://x.com/{handle}/status/{dup}")
             return 3
         elif media:
-            r = poster.post_with_media(text, [poster.upload_media(str(m)) for m in media])
+            r = poster.post_with_media(text, [poster.upload_video(str(m)) if m.suffix.lower() == ".mp4"
+                                              else poster.upload_media(str(m)) for m in media])
             print(f"posted: https://x.com/{handle}/status/{(r.get('data') or {}).get('id')}")
         else:
             r = poster.post(text)
