@@ -228,3 +228,24 @@ def test_delete_needs_repeated_id():
     with pytest.raises(yt.Refused, match="confirm"):
         yt.check_delete_confirmation("abc123", "abc12")
     yt.check_delete_confirmation("abc123", "abc123")
+
+
+# ---------------------------------------------------------------- update
+
+def test_update_needs_owner_yes():
+    with pytest.raises(yt.Refused, match="owner"):
+        yt.build_update_body("vid1", {"title": "T", "description": "D"}, approved=None)
+
+
+def test_update_changes_text_only_never_privacy():
+    body = yt.build_update_body("vid1", {"title": "T", "description": "D", "tags": ["a"]},
+                                approved="owner yes in chat 2026-11-02")
+    assert body["id"] == "vid1"
+    assert body["snippet"]["description"] == "D"
+    assert body["snippet"]["tags"] == ["a"]
+    assert "status" not in body
+
+
+def test_update_applies_same_metadata_guards():
+    with pytest.raises(yt.Refused, match="angle"):
+        yt.build_update_body("vid1", {"title": "T", "description": "<x>"}, approved="yes")

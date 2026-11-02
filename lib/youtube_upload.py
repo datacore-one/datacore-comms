@@ -227,6 +227,14 @@ def build_body(meta: dict, privacy: str | None, approved: str | None) -> dict:
     }
 
 
+def build_update_body(video_id: str, meta: dict, approved: str | None) -> dict:
+    """Replace the title, description and tags of a live video; never its privacy."""
+    if not (approved or "").strip():
+        raise Refused("changing a published video's text needs the owner's yes: "
+                      "pass --approved \"<who said yes, when>\"")
+    return {"id": video_id, "snippet": build_body(meta, None, None)["snippet"]}
+
+
 def check_short(path) -> None:
     """A Short must be vertical or square and at most 3 minutes."""
     if not shutil.which("ffprobe"):
@@ -441,6 +449,16 @@ def cmd_list(a) -> int:
     return 0
 
 
+def cmd_update(a) -> int:
+    body = build_update_body(a.video, load_meta(a.meta), a.approved)
+    svc = _ready(a.channel)
+    svc.videos().update(part="snippet", body=body).execute()
+    log_event({"action": "update", "channel": a.channel, "video_id": a.video,
+               "title": body["snippet"]["title"], "approved": a.approved})
+    print(f"updated title, description and tags of {a.video} on {a.channel}")
+    return 0
+
+
 def cmd_delete(a) -> int:
     check_delete_confirmation(a.video, a.confirm)
     svc = _ready(a.channel)
@@ -494,6 +512,13 @@ def main(argv=None) -> int:
     chan(s)
     s.add_argument("--limit", type=int, default=10)
     s.set_defaults(fn=cmd_list)
+
+    s = sub.add_parser("update", help="replace a video's title, description and tags")
+    chan(s)
+    s.add_argument("--video", required=True)
+    s.add_argument("--meta", required=True, help="YAML with title, description, tags[, category]")
+    s.add_argument("--approved", help="the owner's yes for the new text")
+    s.set_defaults(fn=cmd_update)
 
     s = sub.add_parser("delete", help="delete one video (needs --confirm ID)")
     chan(s)
