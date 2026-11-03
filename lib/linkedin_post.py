@@ -68,7 +68,7 @@ LINKEDIN_VERSION = os.environ.get("LINKEDIN_VERSION", "202610")
 REDIRECT_PORT = 8765
 REDIRECT_URI = f"http://localhost:{REDIRECT_PORT}/linkedin/callback"
 SCOPES = {"person": "openid profile w_member_social",
-          "organization": "w_organization_social r_organization_social"}
+          "organization": "w_organization_social"}
 CONSUMER = "linkedin_post"
 TEXT_MAX = 3000
 WARN_DAYS = 7
