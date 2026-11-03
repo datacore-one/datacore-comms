@@ -223,6 +223,8 @@ egress:
     kind: x.post
   - fn: lib/x_poster.py:reply_with_media
     kind: x.reply
+  - fn: lib/linkedin_post.py:publish
+    kind: linkedin.post
 
 # Reads, inference, and notifications-to-self. Each POSTs, none publishes.
 exempt:
@@ -271,5 +273,11 @@ exempt:
     reason: transport helper; every caller that publishes is attested above
   - fn: "lib/x_poster.py:_oauth_delete"
     reason: transport helper for unfollow; no content published
+  - fn: "lib/linkedin_post.py:_send"
+    reason: transport helper; the only caller that publishes (publish) is attested; also image upload precursor, sign-in profile read and delete of an own post
+  - fn: "lib/linkedin_post.py:_fetch"
+    reason: "read-only — fetches a public page's og tags and image for a link preview"
+  - fn: "lib/linkedin_post.py:cmd_auth"
+    reason: OAuth code-for-token exchange with LinkedIn; no content published
   - fn: "lib/follow_manager.py:*"
     reason: read-only — checks follow state
