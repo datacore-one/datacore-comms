@@ -63,7 +63,8 @@ from datacore.ledger import attests  # noqa: E402
 API = "https://api.linkedin.com"
 AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
-LINKEDIN_VERSION = os.environ.get("LINKEDIN_VERSION", "202510")
+# LinkedIn retires a version after about a year; a 426 NONEXISTENT_VERSION means bump this.
+LINKEDIN_VERSION = os.environ.get("LINKEDIN_VERSION", "202610")
 REDIRECT_PORT = 8765
 REDIRECT_URI = f"http://localhost:{REDIRECT_PORT}/linkedin/callback"
 SCOPES = {"person": "openid profile w_member_social",
