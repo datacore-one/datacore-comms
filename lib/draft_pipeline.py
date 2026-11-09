@@ -293,6 +293,15 @@ def _send_eval_followup(reply_to_msg_id: int, eval_text: str):
         pass  # Best effort
 
 
+def _miles_argv(cmd: str) -> list:
+    """argv running `cmd` as Miles where the fleet roster puts him (dayshift since 2026-10-28)."""
+    try:
+        import fleet_reach
+        return fleet_reach.argv(fleet_reach.place("nightshift"), cmd)
+    except Exception:
+        return ["ssh", "nightshift", cmd]
+
+
 def _sync_draft_to_server(state: dict, draft_id: str):
     """Sync a single draft to the nightshift server's engagement state.
 
@@ -337,7 +346,7 @@ def _sync_draft_to_server(state: dict, draft_id: str):
 
     try:
         result = subprocess.run(
-            ["ssh", "nightshift", "python3"],
+            _miles_argv("python3"),
             input=remote_script, capture_output=True, text=True, timeout=10,
         )
         if result.returncode == 0:
