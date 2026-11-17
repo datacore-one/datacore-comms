@@ -56,6 +56,9 @@ def offline(monkeypatch):
     def no_model(*a, **k):
         raise AssertionError("model called without a test asking for it")
     monkeypatch.setattr(cd, "_call_model", no_model)
+    # Logic tests run against fixed thresholds; the shipped policy is tested separately.
+    monkeypatch.setitem(cd.load_config(), "thresholds",
+                        {"stepps_pass": 8, "stepps_reject": 6, "rubric_pass": 8, "max_attempts": 3})
     monkeypatch.setattr(guardrails, "client_name_patterns",
                         lambda: [re.compile(re.escape(FICTIONAL_CLIENT), re.I)])
 
@@ -433,3 +436,12 @@ def test_index_files_are_not_drafts(tmp_path):
     found = [p.name for p in cd.collect_paths(tmp_path)] if hasattr(cd, "collect_paths") else None
     assert found is not None, "collect_paths(dir) should list the draft files in a batch folder"
     assert "INDEX.md" not in found and "a.yaml" in found
+
+
+def test_shipped_policy_makes_stepps_advisory():
+    """Owner decision 2026-11-18: pass on the rubric plus hard rules; STEPPS is only recorded."""
+    import yaml as _yaml
+    t = _yaml.safe_load(cd.CONFIG_PATH.read_text())["thresholds"]
+    assert t["stepps_pass"] == 0 and t["stepps_reject"] == 0
+    assert t["rubric_pass"] == 8
+

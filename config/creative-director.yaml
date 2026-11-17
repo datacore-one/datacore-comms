@@ -6,8 +6,11 @@
 model: openai/gpt-6.1-terra
 
 thresholds:
-  stepps_pass: 8        # of 11 (voice-enforcer viral checklist)
-  stepps_reject: 6      # under this the checklist says regenerate
+  # Owner decision 2026-11-18: STEPPS is advisory. Developer posts scored 1-4 of 11 even at
+  # quality 9/10; the gate passes on the rubric plus hard rules, and the STEPPS score is still
+  # recorded in every gate block as a hint.
+  stepps_pass: 0        # of 11 (voice-enforcer viral checklist); was 8
+  stepps_reject: 0      # was 6
   rubric_pass: 8        # of 10
   max_attempts: 3       # first draft plus two rewrites, then it drops
 
