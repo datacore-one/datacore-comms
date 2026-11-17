@@ -31,3 +31,7 @@ def _kill_switch_is_not_the_hosts(tmp_path, monkeypatch):
     except Exception:  # noqa: BLE001 -- tests that never import the poster are unaffected
         return
     monkeypatch.setattr(x_poster, "KILL_SWITCH_PATH", tmp_path / "no-kill-switch")
+    # Same for the engagement switch (2026-11-17): the host's real
+    # x-engagement-kill-switch must not halt reply/like/follow tests.
+    if hasattr(x_poster, "ENGAGEMENT_KILL_SWITCH_PATH"):
+        monkeypatch.setattr(x_poster, "ENGAGEMENT_KILL_SWITCH_PATH", tmp_path / "no-engagement-switch")
