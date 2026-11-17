@@ -183,11 +183,11 @@ def test_pilot_claims_from_guardrails_are_rejected(tmp_path):
 
 
 def test_x_length_counts_the_link(tmp_path):
+    # X counts an appended link as one space plus 23 characters (t.co), whatever its real length.
     link = "https://plur.ai/blog/agent-memory-correction-preservation-checklist/"
-    text = "x" * (280 - len(link))  # fits alone, not with the link appended
-    fails = hard(tmp_path, channel="x", text=text, link=link)
+    fails = hard(tmp_path, channel="x", text="x" * 257, link=link)  # 257 + 1 + 23 = 281
     assert any("length" in f for f in fails)
-    assert hard(tmp_path, channel="x", text="x" * (279 - len(link) - 1), link=link) == []
+    assert hard(tmp_path, channel="x", text="x" * 256, link=link) == []  # 256 + 1 + 23 = 280
 
 
 def test_same_text_fits_linkedin(tmp_path):
@@ -398,3 +398,38 @@ def test_a_file_missing_fields_is_reported_not_crashed(tmp_path, capsys):
     (tmp_path / "content-ledger.csv").write_text("id\n")
     assert cd.main(["check", str(p), "--no-model"]) == 0
     assert "missing" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------- fixes after the first real batch (2026-11-17)
+
+LONG_LINK = ("https://plur.ai/blog/agent-memory-tool-provenance-checklist/"
+             "?utm_source=x&utm_medium=social&utm_campaign=distribution_2026_11&utm_content=trace-fact")
+
+
+def test_x_counts_every_link_as_23_characters(tmp_path):
+    body = "x" * 240
+    # 240 chars + space + link counted as 23 = 264, inside X's 280 even though the raw URL is long
+    assert not any("length" in f for f in hard(tmp_path, channel="x", text=body + " " + LONG_LINK, link=LONG_LINK))
+    assert not any("length" in f for f in hard(tmp_path, channel="x", text=body, link=LONG_LINK))
+    assert any("length" in f for f in hard(tmp_path, channel="x", text="x" * 270 + " " + LONG_LINK, link=LONG_LINK))
+
+
+def test_receipts_rule_reads_the_prose_not_the_url(tmp_path):
+    text = "When your agent recalls a fact, can you trace where it came from? " + LONG_LINK
+    assert not any("receipts" in f for f in hard(tmp_path, text=text, link=LONG_LINK))
+    assert any("receipts" in f for f in hard(tmp_path, text="PLUR leaves a receipt for every recall. " + LONG_LINK,
+                                              link=LONG_LINK))
+
+
+def test_brand_both_applies_both_rule_sets(tmp_path):
+    assert hard(tmp_path, brand="both", text=PLUR_OK) == []
+    assert any("hashtag" in f.lower() for f in hard(tmp_path, brand="both", text=PLUR_OK + " #AI"))
+    assert any("percentage" in f for f in hard(tmp_path, brand="both", text=PLUR_OK + " Up 34% this week."))
+
+
+def test_index_files_are_not_drafts(tmp_path):
+    draft(tmp_path, name="a.yaml")
+    (tmp_path / "INDEX.md").write_text("# Batch\n\n| id | date |\n|---|---|\n")
+    found = [p.name for p in cd.collect_paths(tmp_path)] if hasattr(cd, "collect_paths") else None
+    assert found is not None, "collect_paths(dir) should list the draft files in a batch folder"
+    assert "INDEX.md" not in found and "a.yaml" in found

@@ -20,7 +20,7 @@ channel_limits:
   blog: 100000
   hn: 2000
 
-brands: [plur, datafund]
+brands: [plur, datafund, both]
 
 # Hosts that refuse scripted requests with 403. A 403 there means "check it in
 # a browser", not a broken link.

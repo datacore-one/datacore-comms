@@ -197,6 +197,7 @@ _HASHTAG = re.compile(r"(?<![\w&#])#[A-Za-z_]\w*")
 
 
 def _plur_rules(text: str) -> List[str]:
+    text = _BARE.sub(" ", _URL.sub(" ", text))  # judge the prose, not words inside link URLs
     out = []
     if _PERCENT.search(text):
         out.append(f"PLUR: no benchmark percentages ('{_PERCENT.search(text).group(0)}')")
@@ -227,7 +228,11 @@ def _datafund_rules(text: str) -> List[str]:
     return out
 
 
-BRAND_RULES = {"plur": _plur_rules, "datafund": _datafund_rules}
+def _both_rules(text: str) -> List[str]:
+    return _plur_rules(text) + _datafund_rules(text)
+
+
+BRAND_RULES = {"plur": _plur_rules, "datafund": _datafund_rules, "both": _both_rules}
 
 
 def hard_rule_failures(draft: Draft) -> Tuple[List[str], List[str]]:
@@ -260,8 +265,13 @@ def hard_rule_failures(draft: Draft) -> Tuple[List[str], List[str]]:
     if draft.channel not in limits:
         failures.append(f"unknown channel '{draft.channel}' (expected {'|'.join(limits)})")
     else:
-        length = len(text) + (0 if in_text or not re.match(r"https?://", draft.link)
-                              else 1 + len(draft.link))
+        if draft.channel == "x":
+            # X shortens every link to 23 characters (t.co), whatever its real length
+            body = _URL.sub("x" * 23, text)
+            length = len(body) + (0 if in_text or not re.match(r"https?://", draft.link) else 1 + 23)
+        else:
+            length = len(text) + (0 if in_text or not re.match(r"https?://", draft.link)
+                                  else 1 + len(draft.link))
         if length > limits[draft.channel]:
             failures.append(f"length {length} over the {draft.channel} limit of {limits[draft.channel]} "
                             "(link included)")
@@ -462,11 +472,19 @@ def check_file(path: Path, use_model: bool = True, log_path: Optional[Path] = No
 
 # ------------------------------------------------------------------ CLI
 
-def _drafts_in(target: Path) -> List[Path]:
+_NOT_DRAFTS = {"index.md", "readme.md"}
+
+
+def collect_paths(target: Path) -> List[Path]:
+    """Draft files in a batch folder: YAML or markdown, skipping INDEX.md / README.md."""
     if target.is_file():
         return [target]
     return sorted(p for p in target.iterdir()
-                  if p.is_file() and p.suffix in (".yaml", ".yml", ".md") and not p.name.startswith("."))
+                  if p.is_file() and p.suffix in (".yaml", ".yml", ".md") and not p.name.startswith(".")
+                  and p.name.lower() not in _NOT_DRAFTS)
+
+
+_drafts_in = collect_paths
 
 
 def main(argv: Optional[List[str]] = None) -> int:
