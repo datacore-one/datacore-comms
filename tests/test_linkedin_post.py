@@ -198,3 +198,12 @@ def test_dry_run_works_before_sign_in(tmp_path, monkeypatch, capsys):
     assert '"author": "urn:li:organization:42"' in capsys.readouterr().out
     assert li.main(["post", "--as", "gregor", "--text-file", str(f), "--dry-run"]) == 0
     assert "after sign-in" in capsys.readouterr().out
+
+
+def test_open_graph_keeps_apostrophes_inside_double_quotes():
+    import linkedin_post as li
+    page = ('<meta property="og:title" content="How to give an AI agent a record it can\'t rewrite">'
+            "<meta property='og:description' content='Say \"hello\" first'>")
+    og = li.parse_open_graph(page)
+    assert og["title"] == "How to give an AI agent a record it can't rewrite"
+    assert og["description"] == 'Say "hello" first'
