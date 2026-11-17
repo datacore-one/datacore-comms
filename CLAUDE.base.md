@@ -77,6 +77,8 @@ Mon: kickoff roast | Tue-Thu: educational | Fri: community | Sat: philosophical 
 
 Social Currency, Trigger, Emotion, Public, Practical Value, Story, Purple Cow, Sneezer Share, Tribe Identity, Voice Match, Platform Fit.
 
+**Creative-director gate** (`lib/creative_director.py check <file-or-dir> [--no-model]`): hard claim rules, then this checklist and a 10-point rubric scored by a non-Anthropic model via OpenRouter (unscored if unreachable, never self-graded). Writes `gate:` into each draft and a line to `gate-log.jsonl` beside the campaign's `content-ledger.csv`. Settings: `config/creative-director.yaml`.
+
 ## Key Paths
 
 | Path | Purpose |

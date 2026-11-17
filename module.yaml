@@ -244,6 +244,8 @@ exempt:
     reason: inference only; spend attestation tracked separately
   - fn: "lib/draft_evaluator.py:_run_evaluator_openrouter"
     reason: inference only; spend attestation tracked separately
+  - fn: "lib/creative_director.py:_call_model"
+    reason: inference only -- independent scoring of a draft; publishes nothing
   - fn: "lib/campaign-monitor.py:late_get"
     reason: read-only analytics fetch
   - fn: "lib/follow_manager.py:check_follow_backs"

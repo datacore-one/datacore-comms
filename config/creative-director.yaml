@@ -1,0 +1,30 @@
+# Creative-director gate (lib/creative_director.py) -- generic settings only.
+# Campaign data (drafts, the gate log) lives in the space folders, never here.
+
+# The scoring model must not be the drafter's family. Drafts are written by
+# Claude, so an anthropic/ model is refused and the piece stays "unscored".
+model: openai/gpt-6.1-terra
+
+thresholds:
+  # Owner decision 2026-11-18: STEPPS is advisory. Developer posts scored 1-4 of 11 even at
+  # quality 9/10; the gate passes on the rubric plus hard rules, and the STEPPS score is still
+  # recorded in every gate block as a hint.
+  stepps_pass: 0        # of 11 (voice-enforcer viral checklist); was 8
+  stepps_reject: 0      # was 6
+  rubric_pass: 8        # of 10
+  max_attempts: 3       # first draft plus two rewrites, then it drops
+
+# Characters, counting the link when it is not already in the text.
+channel_limits:
+  x: 280
+  linkedin: 3000
+  reddit: 40000
+  devto: 100000
+  blog: 100000
+  hn: 2000
+
+brands: [plur, datafund, both]
+
+# Hosts that refuse scripted requests with 403. A 403 there means "check it in
+# a browser", not a broken link.
+browser_check_hosts: [datafund.io]

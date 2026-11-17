@@ -33,6 +33,43 @@ def claim_violations(text: str) -> List[str]:
     return out
 
 
+def client_name_patterns() -> Optional[List["re.Pattern"]]:
+    """Client names that must never appear in public text, or None if unknown.
+
+    The names live in the installation's private customer denylist
+    (``~/.datacore/private/customer-denylist.yaml``, ``forbidden_content``), the
+    same list the core memory guard enforces -- so this module ships no names.
+    Read through that guard's own loader. None means the list is not on this
+    host, which a caller must report as "not checked", never as clean.
+    """
+    import os
+    import sys
+    from pathlib import Path
+    hooks = Path(os.environ.get("DATACORE_LIB")
+                 or Path(__file__).resolve().parents[3] / "lib") / "hooks"
+    if str(hooks) not in sys.path:
+        sys.path.insert(0, str(hooks))
+    try:
+        import memory_guard
+    except Exception:  # noqa: BLE001 -- core guard absent: cannot check
+        return None
+    path = memory_guard._real_home() / ".datacore" / "private" / "customer-denylist.yaml"
+    if not path.is_file():
+        return None
+    return [rx for _label, rx in memory_guard._denylist()]
+
+
+def client_name_violations(text: str) -> List[str]:
+    """Client names from the private denylist found in ``text``.
+
+    The reason names the pattern's position, never the client."""
+    out = []
+    for i, rx in enumerate(client_name_patterns() or [], 1):
+        if rx.search(text):
+            out.append(f"Names a client from the private denylist (entry {i})")
+    return out
+
+
 class ClaimNotVerified(ValueError):
     """Raised by a publisher when text claims a pilot or deployment (MEM-18)."""
 
