@@ -58,6 +58,13 @@ KILL_SWITCH_PATH = Path(os.environ.get(
 )) / ".datacore" / "state" / "campaign-kill-switch"
 
 
+# Engagement switch — if this file exists, replies, likes, follows and unfollows
+# are halted while standalone posts may continue (owner decision 2026-11-17).
+ENGAGEMENT_KILL_SWITCH_PATH = Path(os.environ.get(
+    "DATACORE_ROOT", os.path.expanduser("~/Data")
+)) / ".datacore" / "state" / "x-engagement-kill-switch"
+
+
 class KillSwitchActive(RuntimeError):
     """Raised when kill switch file exists."""
     pass
@@ -150,6 +157,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def reply(self, text: str, reply_to_id: str, skip_verification: bool = False) -> dict:
         """Reply to a tweet."""
+        self._check_engagement_switch()
         self._refuse_claims(text)
         self._verify_text_links(text, skip_verification)
         self._check_rate_limit()
@@ -177,19 +185,19 @@ class XPoster:
 
     def like(self, tweet_id: str) -> dict:
         """Like a tweet. Requires user_id."""
-        self._check_kill_switch()
+        self._check_engagement_switch()
         url = f"https://api.x.com/2/users/{self.user_id}/likes"
         return self._oauth_post(url, {'tweet_id': tweet_id})
 
     def follow(self, target_user_id: str) -> dict:
         """Follow a user. Requires user_id."""
-        self._check_kill_switch()
+        self._check_engagement_switch()
         url = f"https://api.x.com/2/users/{self.user_id}/following"
         return self._oauth_post(url, {'target_user_id': target_user_id})
 
     def unfollow(self, target_user_id: str) -> dict:
         """Unfollow a user. Requires user_id."""
-        self._check_kill_switch()
+        self._check_engagement_switch()
         url = f"https://api.x.com/2/users/{self.user_id}/following/{target_user_id}"
         return self._oauth_delete(url)
 
@@ -297,6 +305,7 @@ class XPoster:
              detail=lambda r: ((r or {}).get("data") or {}).get("text", "")[:200])
     def reply_with_media(self, text: str, reply_to_id: str, media_ids: list) -> dict:
         """Reply to a tweet with media attachments."""
+        self._check_engagement_switch()
         self._refuse_claims(text)
         self._check_rate_limit()
         payload = {
@@ -321,6 +330,16 @@ class XPoster:
             raise KillSwitchActive(
                 f"Kill switch active: {reason}. "
                 f"Remove {KILL_SWITCH_PATH} to resume."
+            )
+
+    def _check_engagement_switch(self):
+        """Replies, likes, follows and unfollows: halted while the engagement switch exists."""
+        self._check_kill_switch()
+        if ENGAGEMENT_KILL_SWITCH_PATH.exists():
+            reason = ENGAGEMENT_KILL_SWITCH_PATH.read_text().strip() or "No reason given"
+            raise KillSwitchActive(
+                f"X engagement halted: {reason}. "
+                f"Only the owner may remove {ENGAGEMENT_KILL_SWITCH_PATH}."
             )
 
     # --- Persistent rate limiting (SQLite) ---

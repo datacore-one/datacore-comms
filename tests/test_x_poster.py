@@ -210,3 +210,56 @@ class TestFollowActions:
                 poster.unfollow('67890')
                 url = mock.call_args[0][0]
                 assert '67890' in url
+
+
+class TestEngagementGuard:
+    """Owner 2026-11-17: posting may resume, engagement stays halted.
+
+    The campaign kill switch still halts everything; a separate engagement
+    switch halts replies, likes, follows and unfollows only.
+    """
+
+    ENV = {
+        'PLUR_X_API_KEY': 'k', 'PLUR_X_API_SECRET': 's',
+        'PLUR_X_ACCESS_TOKEN': 't', 'PLUR_X_ACCESS_TOKEN_SECRET': 'ts',
+    }
+
+    def _poster(self, tmp_path, monkeypatch, campaign=False, engagement=False):
+        import x_poster
+        campaign_path = tmp_path / "campaign-kill-switch"
+        engagement_path = tmp_path / "x-engagement-kill-switch"
+        if campaign:
+            campaign_path.write_text("halt everything")
+        if engagement:
+            engagement_path.write_text("engagement halted")
+        monkeypatch.setattr(x_poster, "KILL_SWITCH_PATH", campaign_path)
+        monkeypatch.setattr(x_poster, "ENGAGEMENT_KILL_SWITCH_PATH", engagement_path)
+        monkeypatch.setattr(x_poster.XPoster, "_refuse_claims", lambda self, text: None)
+        with patch.dict(os.environ, self.ENV, clear=False):
+            poster = x_poster.XPoster(account='plur', user_id='42', state_dir=str(tmp_path / "state"),
+                                      verify_links=False)
+        return x_poster, poster
+
+    def test_post_allowed_when_only_engagement_is_halted(self, tmp_path, monkeypatch):
+        x_poster, poster = self._poster(tmp_path, monkeypatch, engagement=True)
+        with patch.object(poster, '_oauth_post', return_value={'data': {'id': '1'}}):
+            assert poster.post("hello", skip_verification=True)['data']['id'] == '1'
+
+    @pytest.mark.parametrize("call", [
+        lambda p: p.reply("hi", "99", skip_verification=True),
+        lambda p: p.like("99"),
+        lambda p: p.follow("99"),
+        lambda p: p.unfollow("99"),
+    ])
+    def test_engagement_blocked_by_engagement_switch(self, tmp_path, monkeypatch, call):
+        x_poster, poster = self._poster(tmp_path, monkeypatch, engagement=True)
+        with patch.object(poster, '_oauth_post', return_value={'data': {'id': '1'}}), \
+             patch.object(poster, '_oauth_delete', return_value={'data': {}}):
+            with pytest.raises(x_poster.KillSwitchActive, match="engagement"):
+                call(poster)
+
+    def test_campaign_switch_still_halts_posting(self, tmp_path, monkeypatch):
+        x_poster, poster = self._poster(tmp_path, monkeypatch, campaign=True)
+        with patch.object(poster, '_oauth_post', return_value={'data': {'id': '1'}}):
+            with pytest.raises(x_poster.KillSwitchActive):
+                poster.post("hello", skip_verification=True)
