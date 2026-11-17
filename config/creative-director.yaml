@@ -1,0 +1,27 @@
+# Creative-director gate (lib/creative_director.py) -- generic settings only.
+# Campaign data (drafts, the gate log) lives in the space folders, never here.
+
+# The scoring model must not be the drafter's family. Drafts are written by
+# Claude, so an anthropic/ model is refused and the piece stays "unscored".
+model: openai/gpt-6.1-terra
+
+thresholds:
+  stepps_pass: 8        # of 11 (voice-enforcer viral checklist)
+  stepps_reject: 6      # under this the checklist says regenerate
+  rubric_pass: 8        # of 10
+  max_attempts: 3       # first draft plus two rewrites, then it drops
+
+# Characters, counting the link when it is not already in the text.
+channel_limits:
+  x: 280
+  linkedin: 3000
+  reddit: 40000
+  devto: 100000
+  blog: 100000
+  hn: 2000
+
+brands: [plur, datafund]
+
+# Hosts that refuse scripted requests with 403. A 403 there means "check it in
+# a browser", not a broken link.
+browser_check_hosts: [datafund.io]
