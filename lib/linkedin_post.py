@@ -305,14 +305,17 @@ def upload_image(token: str, owner: str, path: Path) -> str:
 # ---------------------------------------------------------------- link preview
 
 _META = re.compile(r"<meta\s+[^>]*?(?:property|name)=[\"']og:(title|description|image)[\"'][^>]*?"
-                   r"content=[\"']([^\"']*)[\"']", re.I)
+                   r"content=(?:\"([^\"]*)\"|'([^']*)')", re.I)
 
 
 def parse_open_graph(page: str) -> dict:
-    """LinkedIn's API does not scrape link previews: we read the page's og: tags."""
+    """LinkedIn's API does not scrape link previews: we read the page's og: tags.
+
+    The content value ends at its own quote character, so an apostrophe inside a
+    double-quoted title ("it can't") is kept."""
     og = {}
-    for key, value in _META.findall(page):
-        og.setdefault(key.lower(), html.unescape(value))
+    for key, dq, sq in _META.findall(page):
+        og.setdefault(key.lower(), html.unescape(dq or sq))
     return og
 
 
