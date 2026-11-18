@@ -322,6 +322,11 @@ class XPoster:
         url = f"https://api.x.com/2/tweets/{tweet_id}?tweet.fields={fields}"
         return self._oauth_get(url)
 
+    def repost(self, tweet_id: str, user_id: str) -> dict:
+        """Repost (retweet) a post as this account. Publishing, so the posting kill switch applies."""
+        self._check_kill_switch()
+        return self._oauth_post(f"https://api.x.com/2/users/{user_id}/retweets", {"tweet_id": str(tweet_id)})
+
     # --- Kill switch ---
 
     def _check_kill_switch(self):
@@ -537,6 +542,7 @@ def main(argv=None) -> int:
     act.add_argument("--recent", type=int, metavar="N", help="print the account's last N posts (read-only)")
     act.add_argument("--post-file", type=Path, metavar="FILE", help="post FILE's text as one post")
     act.add_argument("--delete", metavar="POST_ID", help="delete one of this account's own posts")
+    act.add_argument("--repost", metavar="POST_ID", help="repost (retweet) a post as this account")
     ap.add_argument("--media", action="append", type=Path, metavar="IMAGE",
                     help="attach IMAGE (or one .mp4 video) to the --post-file post (repeatable)")
     ap.add_argument("--state-dir", help=argparse.SUPPRESS)
@@ -581,6 +587,9 @@ def main(argv=None) -> int:
                 return 1
             poster._oauth_delete(f"https://api.x.com/2/tweets/{a.delete}")
             print(f"deleted: {a.delete}")
+        elif a.repost:
+            poster.repost(a.repost, user_id=me.get("id"))
+            print(f"reposted {a.repost} as @{handle}")
         elif (dup := _already_posted(poster, me, text)):
             print(f"already posted: https://x.com/{handle}/status/{dup}")
             return 3

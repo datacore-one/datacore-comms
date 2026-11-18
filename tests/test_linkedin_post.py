@@ -226,3 +226,15 @@ def test_video_finalize_body_lists_etags_in_order():
     body = li.video_finalize_body("urn:li:video:9", "tok", ["e1", "e2"])
     assert body == {"finalizeUploadRequest": {"video": "urn:li:video:9", "uploadToken": "tok",
                                               "uploadedPartIds": ["e1", "e2"]}}
+
+
+def test_reshare_body_points_at_the_parent_post():
+    body = li.build_reshare_body("urn:li:organization:1", "urn:li:ugcPost:7", "")
+    assert body["reshareContext"] == {"parent": "urn:li:ugcPost:7"}
+    assert body["author"] == "urn:li:organization:1" and body["lifecycleState"] == "PUBLISHED"
+    assert "content" not in body
+
+
+def test_reshare_refuses_something_that_is_not_a_post_urn():
+    with pytest.raises(li.Refused):
+        li.build_reshare_body("urn:li:organization:1", "https://linkedin.com/x", "")

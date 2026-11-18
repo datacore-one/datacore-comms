@@ -261,6 +261,15 @@ def build_post_body(author: str, text: str, article: dict | None = None,
     return body
 
 
+def build_reshare_body(author: str, parent: str, text: str) -> dict:
+    """Repost an existing post (optionally with a comment) as this author."""
+    if not re.fullmatch(r"urn:li:(ugcPost|share|activity):\d+", parent or ""):
+        raise Refused(f"not a LinkedIn post URN: {parent!r}")
+    body = build_post_body(author, text)
+    body["reshareContext"] = {"parent": parent}
+    return body
+
+
 def _headers(token: str | None, extra: dict | None = None) -> dict:
     h = {"LinkedIn-Version": LINKEDIN_VERSION, "X-Restli-Protocol-Version": "2.0.0",
          "Content-Type": "application/json"}
@@ -501,6 +510,27 @@ def cmd_post(a) -> int:
     return 0
 
 
+def cmd_reshare(a) -> int:
+    if not a.dry_run:
+        require_approved(a.approved)
+    text = Path(a.text_file).read_text().strip() if a.text_file else ""
+    if text:
+        check_text(text)
+    cfg = author_config(a.author, load_authors())
+    token = load_token(a.author)
+    check_token(a.author, token)
+    owner = author_urn(a.author, cfg, token)
+    body = build_reshare_body(owner, a.post, text)
+    if a.dry_run:
+        print(json.dumps(body, indent=1, ensure_ascii=False))
+        return 0
+    urn = publish(token["access_token"], body)
+    log_event({"action": "reshare", "author": a.author, "urn": urn, "parent": a.post,
+               "text": text[:200], "approved": a.approved})
+    print(f"reshared as {a.author}: https://www.linkedin.com/feed/update/{urn}/")
+    return 0
+
+
 def cmd_delete(a) -> int:
     check_delete_confirmation(a.post, a.confirm)
     author_config(a.author, load_authors())
@@ -535,6 +565,14 @@ def main(argv=None) -> int:
     s.add_argument("--approved", help="the owner's yes for this exact text")
     s.add_argument("--dry-run", action="store_true", help="print the request; send nothing")
     s.set_defaults(fn=cmd_post)
+    s = sub.add_parser("reshare", help="repost an existing post as this author")
+    s.add_argument("--as", dest="author", required=True, help="gregor, datafund or plur")
+    s.add_argument("--post", required=True, help="the post URN, e.g. urn:li:ugcPost:123")
+    s.add_argument("--text-file", help="optional comment on top of the repost")
+    s.add_argument("--approved", help="the owner's yes for this repost")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(fn=cmd_reshare)
+
     s = sub.add_parser("delete", help="delete one post (needs --confirm ID)")
     who(s)
     s.add_argument("--post", required=True)
