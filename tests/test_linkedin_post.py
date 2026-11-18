@@ -207,3 +207,22 @@ def test_open_graph_keeps_apostrophes_inside_double_quotes():
     og = li.parse_open_graph(page)
     assert og["title"] == "How to give an AI agent a record it can't rewrite"
     assert og["description"] == 'Say "hello" first'
+
+
+def test_video_post_body_carries_the_video_and_title():
+    body = li.build_post_body("urn:li:organization:1", "One line.", video_urn="urn:li:video:9",
+                              video_title="Drunk On Your Own Supply")
+    assert body["content"] == {"media": {"id": "urn:li:video:9", "title": "Drunk On Your Own Supply"}}
+
+
+def test_video_parts_follow_linkedins_byte_ranges():
+    data = bytes(range(10))
+    instr = [{"uploadUrl": "u1", "firstByte": 0, "lastByte": 3},
+             {"uploadUrl": "u2", "firstByte": 4, "lastByte": 9}]
+    assert li.video_parts(instr, data) == [("u1", data[0:4]), ("u2", data[4:10])]
+
+
+def test_video_finalize_body_lists_etags_in_order():
+    body = li.video_finalize_body("urn:li:video:9", "tok", ["e1", "e2"])
+    assert body == {"finalizeUploadRequest": {"video": "urn:li:video:9", "uploadToken": "tok",
+                                              "uploadedPartIds": ["e1", "e2"]}}

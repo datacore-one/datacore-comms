@@ -241,7 +241,8 @@ def log_event(event: dict) -> None:
 # ---------------------------------------------------------------- request
 
 def build_post_body(author: str, text: str, article: dict | None = None,
-                    image_urn: str | None = None) -> dict:
+                    image_urn: str | None = None, video_urn: str | None = None,
+                    video_title: str | None = None) -> dict:
     body = {
         "author": author,
         "commentary": escape_commentary(text),
@@ -253,6 +254,8 @@ def build_post_body(author: str, text: str, article: dict | None = None,
     }
     if article:
         body["content"] = {"article": {k: v for k, v in article.items() if v}}
+    elif video_urn:
+        body["content"] = {"media": {"id": video_urn, **({"title": video_title} if video_title else {})}}
     elif image_urn:
         body["content"] = {"media": {"id": image_urn}}
     return body
@@ -300,6 +303,50 @@ def upload_image(token: str, owner: str, path: Path) -> str:
     _send("PUT", url, token, data=path.read_bytes(),
           headers={"Authorization": f"Bearer {token}", "Content-Type": "application/octet-stream"})
     return urn
+
+
+def video_parts(instructions: list, data: bytes) -> list:
+    """Split the file along the byte ranges LinkedIn gave (lastByte is inclusive)."""
+    return [(i["uploadUrl"], data[i["firstByte"]:i["lastByte"] + 1]) for i in instructions]
+
+
+def video_finalize_body(urn: str, upload_token: str, etags: list) -> dict:
+    return {"finalizeUploadRequest": {"video": urn, "uploadToken": upload_token or "",
+                                      "uploadedPartIds": list(etags)}}
+
+
+def upload_video(token: str, owner: str, path: Path) -> str:
+    """Upload an MP4 through the Videos API (initialize, PUT each part, finalize); returns its URN."""
+    data = path.read_bytes()
+    _, _, r = _send("POST", f"{API}/rest/videos?action=initializeUpload", token,
+                    {"initializeUploadRequest": {"owner": owner, "fileSizeBytes": len(data),
+                                                 "uploadCaptions": False, "uploadThumbnail": False}})
+    value = r.get("value") or {}
+    urn, instructions = value.get("video"), value.get("uploadInstructions") or []
+    if not urn or not instructions:
+        raise Refused("LinkedIn did not return video upload instructions")
+    etags = []
+    for url, chunk in video_parts(instructions, data):
+        _, headers, _ = _send("PUT", url, token, data=chunk,
+                              headers={"Authorization": f"Bearer {token}",
+                                       "Content-Type": "application/octet-stream"})
+        etag = headers.get("ETag") or headers.get("etag")
+        if not etag:
+            raise Refused("LinkedIn returned no ETag for a video part")
+        etags.append(etag)
+    _send("POST", f"{API}/rest/videos?action=finalizeUpload", token,
+          video_finalize_body(urn, value.get("uploadToken", ""), etags))
+    # A post may only use the video once LinkedIn has processed it.
+    import time
+    for _ in range(60):
+        _, _, v = _send("GET", f"{API}/rest/videos/{urllib.parse.quote(urn, safe='')}", token)
+        status = v.get("status")
+        if status == "AVAILABLE":
+            return urn
+        if status == "PROCESSING_FAILED":
+            raise Refused(f"LinkedIn could not process the video: {v.get('processingFailureReason')}")
+        time.sleep(5)
+    raise Refused("LinkedIn was still processing the video after 5 minutes; nothing was posted")
 
 
 # ---------------------------------------------------------------- link preview
@@ -435,10 +482,13 @@ def cmd_post(a) -> int:
         check_token(a.author, token)
     owner = author_urn(a.author, cfg, token)
     article = article_for(a.link, token["access_token"], owner, a.dry_run) if a.link else None
-    image = None
-    if a.image and not article:
+    image = video = None
+    if a.video and not article:
+        video = "(upload of video)" if a.dry_run else upload_video(token["access_token"], owner, Path(a.video))
+    elif a.image and not article:
         image = "(upload of image)" if a.dry_run else upload_image(token["access_token"], owner, Path(a.image))
-    body = build_post_body(owner, text, article=article, image_urn=image)
+    body = build_post_body(owner, text, article=article, image_urn=image,
+                           video_urn=video, video_title=a.video_title)
     if a.dry_run:
         print(f"POST {API}/rest/posts")
         print(json.dumps({k: v for k, v in _headers(None).items()}, indent=1))
@@ -480,6 +530,8 @@ def main(argv=None) -> int:
     s.add_argument("--text-file", required=True)
     s.add_argument("--link", help="add a link preview built from the page's og: tags")
     s.add_argument("--image", help="attach one image (ignored with --link)")
+    s.add_argument("--video", help="attach one MP4 video (ignored with --link)")
+    s.add_argument("--video-title", help="title shown with the video")
     s.add_argument("--approved", help="the owner's yes for this exact text")
     s.add_argument("--dry-run", action="store_true", help="print the request; send nothing")
     s.set_defaults(fn=cmd_post)
