@@ -249,3 +249,18 @@ def test_update_changes_text_only_never_privacy():
 def test_update_applies_same_metadata_guards():
     with pytest.raises(yt.Refused, match="angle"):
         yt.build_update_body("vid1", {"title": "T", "description": "<x>"}, approved="yes")
+
+
+def test_publish_needs_owner_yes():
+    with pytest.raises(yt.Refused):
+        yt.build_publish_body("abc", "public", None)
+
+
+def test_publish_sets_privacy_only():
+    body = yt.build_publish_body("abc", "public", "Gregor in chat, 18 Nov")
+    assert body == {"id": "abc", "status": {"privacyStatus": "public", "embeddable": True}}
+
+
+def test_publish_refuses_unknown_privacy():
+    with pytest.raises(yt.Refused):
+        yt.build_publish_body("abc", "everyone", "yes")
