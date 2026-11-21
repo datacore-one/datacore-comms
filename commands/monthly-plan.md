@@ -55,6 +55,17 @@ If missing, suggest running `/campaign-plan` first.
 
 ## Workflow
 
+### 0. Inputs and the monthly audit
+
+Before drafting the calendar (details and limits: `docs/visibility-and-pr-stack.md`):
+- Read the latest coverage-graph report and the AI-visibility panel's content gaps. Each gap with no page that
+  could be cited becomes a calendar item (a page or post that answers that question).
+- Read `pr-calendar` moments, only if the Medialyst account exists.
+- Run the monthly site audit: Claude SEO `/seo technical`, `/seo schema`, `/seo geo` and `/seo agentic`,
+  then `/seo drift compare` against last month's baseline. Run the AEO page checklist on each landing and
+  integration page. Write the result to `1-tracks/comms/reports/YYYY-MM-DD-site-audit-report.md`. Fixes
+  become site tasks; nothing is deployed from here.
+
 ### 1. Load Strategy
 
 Read quarterly strategy:

@@ -34,6 +34,11 @@ EXECUTION  — Platform formatting, Voice Enforcement, Viral score gate (8+/11)
 6. **Schedule** — Publishing queue via Tweepy/nightshift or manual approval
 7. **Analyze** — PostHog metrics, conversion reports, A/B tests
 
+External skills plug into these steps: Newsjack (news detection, angles, fact-check, editor and
+AI-visibility skills), Claude SEO (site, schema, GEO and agent-readiness audits) and this module's
+coverage graph (where stories in a beat start). Which step each runs in, and what each may never do:
+`docs/visibility-and-pr-stack.md`.
+
 ### Engagement Pipeline
 
 Discovery of X conversations, reply drafting, Telegram-based approval, posting. Also Chrome-based feed engagement (likes, follows, reply drafts).

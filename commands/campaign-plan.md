@@ -64,6 +64,13 @@ datacortex search "content strategy"
 datacortex search "marketing messaging"
 ```
 
+Then run the quarterly skills (details and limits: `docs/visibility-and-pr-stack.md`):
+- `pr-strategist`: audience, positioning, news pegs and drumbeat, before any channel plan.
+- `build-ai-visibility-panel` on the product site: the prompt panel this quarter is measured against.
+  Panel selection is the owner's gate.
+- Claude SEO `/seo plan saas` and `/seo cluster <core topic>`: the site plan and the blog's topic clusters.
+- The latest coverage-graph report: which sources start stories in our beats.
+
 ### 2. Interactive Planning
 
 Ask the user:

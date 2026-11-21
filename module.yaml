@@ -232,6 +232,8 @@ egress:
 exempt:
   - fn: "lib/reddit_scanner.py:*"
     reason: read-only — Reddit/Exa fetch and token exchange, no content published
+  - fn: "lib/coverage_graph.py:*"
+    reason: read-only — GET of public news pages and the Hacker News search API for the citation graph, nothing published
   - fn: "lib/today_thread.py:*"
     reason: read-only — Exa search and x.ai inference while composing a draft
   - fn: "lib/engagement_discover.py:*"
