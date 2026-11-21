@@ -48,6 +48,17 @@ Present pending drafts for human review, collect approval decisions, and move ap
 
 ## Workflow
 
+### 0. Pre-board gates (run before a draft is shown)
+
+Each draft passes these before it reaches the owner (details: `docs/visibility-and-pr-stack.md`):
+1. `fact-check`: every factual claim is verified and cited. A failed claim blocks the draft; it is not shown
+   with a warning.
+2. `meanest-editor` for pitches, press releases and open letters; `newsworthiness-check` for anything sold as
+   news. Their scores and top fixes go on the board row.
+3. `ai-visibility-writing` for web pages and long posts.
+4. `voice-extractor` check against the sender's fingerprint, once one exists.
+5. Then the existing gates: voice enforcer, STEPPS 8 of 11, claim sheets, URL check.
+
 ### 1. Scan Pending Drafts
 
 Check current month's drafts folder:

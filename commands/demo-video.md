@@ -28,6 +28,20 @@ Conversational: "create demo video", "publish demo video", "process screen recor
 
 ## Pipeline
 
+### Phase 0: Agent edit from raw clips (when there is footage, not one screen recording)
+
+Put every raw clip (and `music.mp3` if there is one) in one folder and give one brief with the mood and the
+length. The agent then:
+1. Looks at every clip before cutting: pull frames with ffmpeg (e.g. `ffmpeg -i clip.mp4 -vf fps=1 frames/%03d.jpg`)
+   and read them, so take choice is based on what is on screen, not on file names.
+2. Keeps only the strongest moments, cuts pauses and shaky parts, and puts the best shot in the first 2 seconds.
+3. Lays the music under the whole video and adds short captions at the top (clear of the platform UI).
+4. Renders `draft.mp4` and **prints every cut with source clip, in and out timestamps**, so a person can change
+   any single cut without re-briefing. The cut list is saved next to the draft.
+
+The draft goes to the owner like any other piece; nothing is published from this phase. Where this came from,
+and where it sits among the other skills: `docs/visibility-and-pr-stack.md`.
+
 ### Phase 1: Prepare Source
 
 1. **Verify source video**:
