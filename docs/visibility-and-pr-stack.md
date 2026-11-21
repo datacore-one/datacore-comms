@@ -35,6 +35,9 @@ owner's call, never an agent's.
 - **Audit:**
   - Claude SEO `/seo technical`, `/seo schema`, `/seo geo` and `/seo agentic` on the product site;
   - `/seo drift compare` against last month's baseline;
+  - refresh the share-of-voice scan's model list to the models answer engines serve today (OpenRouter
+    catalogue). Superseded models stay callable, so a stale list fails silently. Note any change in the
+    next methodology note, because it breaks week-on-week comparison;
   - the AEO page checklist on every landing and integration page.
   - Findings become site tasks; agents never deploy them.
 
