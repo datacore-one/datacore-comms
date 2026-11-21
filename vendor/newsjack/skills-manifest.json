@@ -1,0 +1,288 @@
+{
+  "version": "v0.1.25",
+  "commit": "f68db4a7e89ad93e7fdbb3111ba9dda16dcd4719",
+  "built_at": "2026-11-19T22:08:43.216Z",
+  "skills": [
+    "ai-visibility-panel-design",
+    "ai-visibility-writing",
+    "angle-generator",
+    "build-ai-visibility-panel",
+    "buyer-job-intent-analysis",
+    "citation-foodchain",
+    "coverage-reel",
+    "coverage-tracker",
+    "coverage-tracker-setup",
+    "crisis-holding",
+    "fact-check",
+    "find-journalists",
+    "headline-generator",
+    "icp-evidence-analysis",
+    "journalist-fit-check",
+    "meanest-editor",
+    "news-search",
+    "newsjack-detector",
+    "newsjack-monitor-setup",
+    "newsjack-triage",
+    "newsworthiness-check",
+    "pr-calendar",
+    "pr-strategist",
+    "press-clip",
+    "prompt-proximity-architecture",
+    "prompt-set-qa",
+    "quote-forecast",
+    "reactive-comment",
+    "realistic-prompt-generation",
+    "relevance-coarse-filter",
+    "same-outlet-ranker",
+    "story-origin-check",
+    "transcript-to-stories",
+    "voice-extractor"
+  ],
+  "files": [
+    {
+      "path": "skills/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "skills/ETHICS.md",
+      "sha256": "d0a1f21516d0d938e0c2c7bea74caac290a542a6ebff055560996d63ac06676a",
+      "size": 14989
+    },
+    {
+      "path": "skills/WHY-NOT-SPAM.md",
+      "sha256": "414a00ab97b951394a241ec4f01ea90ac1919e9af7a6ec6db7a428dd5d726842",
+      "size": 14109
+    },
+    {
+      "path": "skills/ai-visibility-panel-design/SKILL.md",
+      "sha256": "9dafb3c9d96ccbfeaa7b82a987a112f1ec0b97efafc59b378eba6d1f4396bbae",
+      "size": 8468
+    },
+    {
+      "path": "skills/ai-visibility-writing/SKILL.md",
+      "sha256": "1dc7b11201c06835f4e09ce8f32a131b3c4feafe40b4819669aa3c750305e653",
+      "size": 10331
+    },
+    {
+      "path": "skills/angle-generator/SKILL.md",
+      "sha256": "5d8169a1ebc4bd44e997931b96ec85e1e97e7ef89288ae9f7f5d6838b5cd315b",
+      "size": 27438
+    },
+    {
+      "path": "skills/build-ai-visibility-panel/SKILL.md",
+      "sha256": "91f991f69b307e45154ca75ef17799a92f2525a1bf371f1747629a558b1c3bfa",
+      "size": 12631
+    },
+    {
+      "path": "skills/build-ai-visibility-panel/references/artifact-contracts.md",
+      "sha256": "8363fb9826c9b97687e8b6df4ce68b6f95ad1b2b21c6e209c1ddec394be79df3",
+      "size": 17132
+    },
+    {
+      "path": "skills/buyer-job-intent-analysis/SKILL.md",
+      "sha256": "94a7ebde429ead6f19ae34082f5e7be0ca9e20ee369249c30e21bcd2c800ee2f",
+      "size": 5654
+    },
+    {
+      "path": "skills/citation-foodchain/SKILL.md",
+      "sha256": "420cf91fa7fd316b23a722a16ad3097c6ca500f5c7207991104e8dacf1b7056e",
+      "size": 34094
+    },
+    {
+      "path": "skills/citation-foodchain/references/evidence-signals.md",
+      "sha256": "a89ffd81470910a0f4d7ac9eeeb1de956791ac6306322a6b549f55c482147e1a",
+      "size": 8782
+    },
+    {
+      "path": "skills/citation-foodchain/trace.mjs",
+      "sha256": "c852b47d13b60b17e519952925c61c3bd22e9f44a6ca01586bd68d7e35e5b2f4",
+      "size": 83876
+    },
+    {
+      "path": "skills/coverage-reel/SKILL.md",
+      "sha256": "ad502c116744ed9349f329b7c7b4e7e58453a7039bfe1f7a0fea52ee23c938fe",
+      "size": 16259
+    },
+    {
+      "path": "skills/coverage-reel/mp4mux.mjs",
+      "sha256": "85340c675a627ab858a9d301eefc41366a6a85477bbbfeaab49ec55fa05f4fd0",
+      "size": 6621
+    },
+    {
+      "path": "skills/coverage-reel/reel-player.js",
+      "sha256": "ca1e0d8c0908e0e463f32d4e90fea52b6e17ac0f63a20080406e2684f7eb6715",
+      "size": 34617
+    },
+    {
+      "path": "skills/coverage-reel/render.mjs",
+      "sha256": "4caa270551f1a7b1a13cd66e9d99dc63f6fcb634433f09de4fcb8ca576469eaa",
+      "size": 72020
+    },
+    {
+      "path": "skills/coverage-reel/timeline.mjs",
+      "sha256": "c6c7ddce0f7f30d926e80a9032cd8938219f674d42449ccae881d26eb2481705",
+      "size": 43654
+    },
+    {
+      "path": "skills/coverage-tracker-setup/SKILL.md",
+      "sha256": "2ccc76107633d656ccf755a6d93c2217c3ed7efd244ce7918841d56b38eff7b0",
+      "size": 5797
+    },
+    {
+      "path": "skills/coverage-tracker/SKILL.md",
+      "sha256": "dfed04f5cf2a040d1151b194e1bf07613886530d440744693b8baf67aff373b6",
+      "size": 8219
+    },
+    {
+      "path": "skills/crisis-holding/SKILL.md",
+      "sha256": "fe0cadb42657ece5e0fcac7b0379f7c0f9ce58e35272e3846b39ab925c262323",
+      "size": 33415
+    },
+    {
+      "path": "skills/fact-check/SKILL.md",
+      "sha256": "deea33bb1924a82ac82ea2a8931b1098b166614ec388718ab000ab5a72f0bbfd",
+      "size": 22318
+    },
+    {
+      "path": "skills/find-journalists/SKILL.md",
+      "sha256": "f24d29ace6c2caf9c273de7090791d9671d227f445d0f319b7d3597b998d9abd",
+      "size": 18306
+    },
+    {
+      "path": "skills/headline-generator/SKILL.md",
+      "sha256": "33f6de470ea7622ebfc66ed95ac6c022b6c251fd163e6d0c265f735c87f75880",
+      "size": 13132
+    },
+    {
+      "path": "skills/headline-generator/evidence.md",
+      "sha256": "dfc0006841337ff3bc9d934055a20735ba4a4a6467523391fe22862bf8d9c707",
+      "size": 10042
+    },
+    {
+      "path": "skills/icp-evidence-analysis/SKILL.md",
+      "sha256": "a0fe84335179dd4e3064b1607df284d52ffc2c9b9e10318b11c4092dedd556ae",
+      "size": 5517
+    },
+    {
+      "path": "skills/journalist-fit-check/SKILL.md",
+      "sha256": "efffb95410c3740a01c1375cd420da4ded8183d2e413322fcbb7e1fd3649320d",
+      "size": 23987
+    },
+    {
+      "path": "skills/meanest-editor/SKILL.md",
+      "sha256": "5cd40fc618d379cbca7e000b09b8d2a32d1a55d8b5a68f30c4907aa5f30b785e",
+      "size": 26445
+    },
+    {
+      "path": "skills/news-search/SKILL.md",
+      "sha256": "03a36d6ba3d692606171360c864fad43afb900bd9d09b57447b4c5180a2fdc2c",
+      "size": 6001
+    },
+    {
+      "path": "skills/newsjack-detector/SKILL.md",
+      "sha256": "8faa11ed83c17885348746ebf4d644f2bb94ddf77e3734aba122572bb6ada209",
+      "size": 50549
+    },
+    {
+      "path": "skills/newsjack-detector/references/engine-cli.md",
+      "sha256": "d00f1f1ca89b29dbb0bc23095a030b1ab519ec8fc0549a8ae87f0e843c78bdbf",
+      "size": 1428
+    },
+    {
+      "path": "skills/newsjack-detector/references/harness-routing.md",
+      "sha256": "f0682d8e9240fdf7d788b7b96d7c5e6dbf8cd2cc8a9f9eef44ae6fd12c66cef7",
+      "size": 5382
+    },
+    {
+      "path": "skills/newsjack-detector/references/rss-feeds.json",
+      "sha256": "e296a2e91baa7fbae85ef2e35e60fa865a99521dab13143f122918853390d55f",
+      "size": 5073
+    },
+    {
+      "path": "skills/newsjack-monitor-setup/SKILL.md",
+      "sha256": "47aaf1415336d7cf62459df21bfc42c92a4d11c63aebeea8b0cda02107ca2535",
+      "size": 24000
+    },
+    {
+      "path": "skills/newsjack-triage/SKILL.md",
+      "sha256": "90c36d84744e5486b423b120bc73a28fb3c94ca3f0b20773f16753361e8e3e64",
+      "size": 12404
+    },
+    {
+      "path": "skills/newsworthiness-check/SKILL.md",
+      "sha256": "0c47d81844d5eca42b14cae8e5b5d956a3993f5aac6b4d36c81a3dee6ea653c5",
+      "size": 20805
+    },
+    {
+      "path": "skills/pr-calendar/SKILL.md",
+      "sha256": "b5f6f55c3361319f9f320f7db38fa785e344b26736f82c557479dfbb2b28b5ac",
+      "size": 15116
+    },
+    {
+      "path": "skills/pr-strategist/SKILL.md",
+      "sha256": "6947ad6cdbed396be69be059596c4359d90a7eed5b6d14c61e6d60114d5970f9",
+      "size": 33368
+    },
+    {
+      "path": "skills/press-clip/SKILL.md",
+      "sha256": "0e5345bd9c7042336321fe8428f3c2bcf0e59573690c2b0007c1b0e1f9ebd0f6",
+      "size": 20446
+    },
+    {
+      "path": "skills/press-clip/clip.mjs",
+      "sha256": "c45bca75fb13e28187c44fe9f75402ca5a648b53e0871f7e83bce3637c9f9bd0",
+      "size": 71580
+    },
+    {
+      "path": "skills/prompt-proximity-architecture/SKILL.md",
+      "sha256": "145d865d47b9c285e070236447099037d48002e60dfb8f419a3d2390653bc8e2",
+      "size": 7760
+    },
+    {
+      "path": "skills/prompt-set-qa/SKILL.md",
+      "sha256": "ddc977010b16e39cf0f4c35a8efde495421d6a27afab38c83551e3078449f59f",
+      "size": 6638
+    },
+    {
+      "path": "skills/quote-forecast/SKILL.md",
+      "sha256": "cddca8372aae10f3a851dc4fd4e35f6e9957ede4b2f1ffe0f8cc554c7b3f9151",
+      "size": 4798
+    },
+    {
+      "path": "skills/reactive-comment/SKILL.md",
+      "sha256": "d62915aed11dcbd6c6bfcfb4008a976e4ca8f01a0cfee9d1a91cdf53e69434a5",
+      "size": 22382
+    },
+    {
+      "path": "skills/realistic-prompt-generation/SKILL.md",
+      "sha256": "3718b398b5a8319e4e4d04ab206e721bff2b5ed0fc4438a79c92c767b7974655",
+      "size": 6582
+    },
+    {
+      "path": "skills/relevance-coarse-filter/SKILL.md",
+      "sha256": "f225105a13e06b2dd03e7da30290ec9dde4509ae4eeef61642ef35642fca6a2d",
+      "size": 7557
+    },
+    {
+      "path": "skills/same-outlet-ranker/SKILL.md",
+      "sha256": "b6ff6564549ab9ee3270270c2566398de08bbfa6a98b992cb11bcffbb5e0f394",
+      "size": 24449
+    },
+    {
+      "path": "skills/story-origin-check/SKILL.md",
+      "sha256": "796dd4f99a8f089507fbdfcfe96c581116f1e738b4cdbc16cc02de86133d0e69",
+      "size": 13206
+    },
+    {
+      "path": "skills/transcript-to-stories/SKILL.md",
+      "sha256": "691394fea8f2f8db62bf30a8cf8ed458615d64a3d2d8230254da088dde68934f",
+      "size": 14582
+    },
+    {
+      "path": "skills/voice-extractor/SKILL.md",
+      "sha256": "1684c65a1eb22d609b5c9a3839cd768feadbfb7b79c4da9d694b5219918c454b",
+      "size": 33031
+    }
+  ]
+}

@@ -4,10 +4,14 @@ The comms pipeline (Position → Plan → Generate → Enforce → Verify → Sc
 external skill sets plugged into it. This page says which step each one runs in, what it reads, what it
 writes, and what it may never do. The commands link here instead of repeating it.
 
-| Skill set | What it is | Install | Check it works |
+Both external packs are **vendored in this module** (`vendor/`, pinned versions and licenses in
+`vendor/README.md`) and made live with `sh vendor/link.sh`. Newsjack skills load as `comms:<name>`
+(e.g. `comms:fact-check`); Claude SEO loads as a plugin registered from `vendor/claude-seo`.
+
+| Skill set | What it is | Lives in | Check it works |
 |---|---|---|---|
-| **Newsjack** (elvisun/newsjack, MIT) | 35 PR and AI-visibility skills plus a local monitoring CLI | `curl -fsSL newsjack.sh \| sh` with `NEWSJACK_RUNTIMES=claude NEWSJACK_RUN_SETUP=0` (or review `install.sh` first) | `~/.newsjack/bin/newsjack --version` and `newsjack doctor` |
-| **Claude SEO** (AgriciDaniel/claude-seo, MIT) | 29 SEO / GEO / agent-readiness skills and 20 agents | `claude plugin marketplace add AgriciDaniel/claude-seo` then `claude plugin install claude-seo@agricidaniel-claude-seo`, then `claude-seo setup` | `claude-seo doctor` shows Runtime ready and Chromium ready |
+| **Newsjack** (elvisun/newsjack, MIT) | 35 PR and AI-visibility skills plus a local monitoring CLI | `vendor/newsjack/skills/`; CLI per host at `~/.newsjack/bin/newsjack` (install steps in `vendor/README.md`) | `newsjack --version`, `newsjack doctor`; skills listed as `comms:*` |
+| **Claude SEO** (AgriciDaniel/claude-seo, MIT) | 29 SEO / GEO / agent-readiness skills and 20 agents | `vendor/claude-seo/`; Python runtime per host via `claude-seo setup` | `claude-seo doctor` shows Runtime ready and Chromium ready |
 | **Coverage graph** (`lib/coverage_graph.py`, this module) | Who-cites-whom graph of news on a topic; PageRank finds where a narrative starts and who amplifies it | ships with the module | `pytest tests/test_coverage_graph.py` |
 | **AEO page checklist** (below) | 11 checks that decide whether an AI agent can read and recommend a page | — | run as part of the monthly audit |
 
