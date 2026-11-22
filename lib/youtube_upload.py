@@ -235,6 +235,16 @@ def build_update_body(video_id: str, meta: dict, approved: str | None) -> dict:
     return {"id": video_id, "snippet": build_body(meta, None, None)["snippet"]}
 
 
+def build_publish_body(video_id: str, privacy: str, approved: str | None) -> dict:
+    """Change only a video's privacy (e.g. private -> public). Needs the owner's yes."""
+    if privacy not in ("private", "unlisted", "public"):
+        raise Refused(f"unknown privacy {privacy!r}")
+    if not (approved or "").strip():
+        raise Refused("changing a video's privacy needs the owner's yes: "
+                      "pass --approved \"<who said yes, when>\"")
+    return {"id": video_id, "status": {"privacyStatus": privacy, "embeddable": True}}
+
+
 def check_short(path) -> None:
     """A Short must be vertical or square and at most 3 minutes."""
     if not shutil.which("ffprobe"):
@@ -459,6 +469,16 @@ def cmd_update(a) -> int:
     return 0
 
 
+def cmd_publish(a) -> int:
+    body = build_publish_body(a.video, a.privacy, a.approved)
+    svc = _ready(a.channel)
+    svc.videos().update(part="status", body=body).execute()
+    log_event({"action": "publish", "channel": a.channel, "video_id": a.video,
+               "privacy": a.privacy, "approved": a.approved})
+    print(f"{a.video} on {a.channel} is now {a.privacy}")
+    return 0
+
+
 def cmd_delete(a) -> int:
     check_delete_confirmation(a.video, a.confirm)
     svc = _ready(a.channel)
@@ -519,6 +539,13 @@ def main(argv=None) -> int:
     s.add_argument("--meta", required=True, help="YAML with title, description, tags[, category]")
     s.add_argument("--approved", help="the owner's yes for the new text")
     s.set_defaults(fn=cmd_update)
+
+    s = sub.add_parser("publish", help="change only a video's privacy (needs --approved)")
+    chan(s)
+    s.add_argument("--video", required=True)
+    s.add_argument("--privacy", required=True, choices=["private", "unlisted", "public"])
+    s.add_argument("--approved", help="the owner's yes for this change")
+    s.set_defaults(fn=cmd_publish)
 
     s = sub.add_parser("delete", help="delete one video (needs --confirm ID)")
     chan(s)
